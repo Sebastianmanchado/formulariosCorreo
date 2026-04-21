@@ -5,22 +5,49 @@ import { proyectoSchema, type Proyecto } from '../schemas/proyecto';
 /**
  * Clave versionada del storage. Bumpeala si el schema cambia de forma
  * incompatible — así los borradores viejos se descartan automáticamente
- * en vez de romper la carga.
+ * en vez de romper la carga. Dejamos las keys anteriores aquí para migrar.
  */
-export const PROYECTO_STORAGE_KEY = 'ad-oo-0136:proyecto:v1';
+export const PROYECTO_STORAGE_KEY = 'ad-oo-0136:proyecto:v2';
+
+const LEGACY_STORAGE_KEYS: readonly string[] = ['ad-oo-0136:proyecto:v1'];
 
 // ─── Primitivas de lectura/escritura ────────────────────────────────────────
 
-export function loadProyectoFromStorage(): Proyecto | undefined {
+function readAndParse(key: string): Proyecto | undefined {
   if (typeof window === 'undefined') return undefined;
   try {
-    const raw = window.localStorage.getItem(PROYECTO_STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return undefined;
     const parsed = proyectoSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;
   }
+}
+
+export function loadProyectoFromStorage(): Proyecto | undefined {
+  // 1) intentar la versión actual
+  const current = readAndParse(PROYECTO_STORAGE_KEY);
+  if (current) return current;
+
+  // 2) migración best-effort desde versiones previas — el schema actual
+  //    tiene defaults para todos los sub-árboles nuevos, así que safeParse
+  //    de un borrador v1 succeed y rellena detalleMensual/anexosActivos
+  //    vacíos sin romper nada.
+  for (const legacyKey of LEGACY_STORAGE_KEYS) {
+    const migrated = readAndParse(legacyKey);
+    if (migrated) {
+      try {
+        window.localStorage.setItem(PROYECTO_STORAGE_KEY, JSON.stringify(migrated));
+        window.localStorage.removeItem(legacyKey);
+      } catch {
+        // quota / modo privado — seguimos con el valor en memoria igual
+      }
+      return migrated;
+    }
+  }
+
+  return undefined;
 }
 
 export function saveProyectoToStorage(proyecto: Proyecto): boolean {

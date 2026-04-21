@@ -20,7 +20,7 @@ const boolField = z.boolean().optional().default(false);
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 const encabezadoSchema = z.object({
-  fecha: textField,           // ISO: YYYY-MM-DD
+  fecha: textField,
   direccion: textField,
   gerencia: textField,
   ot: textField,
@@ -33,13 +33,13 @@ const descripcionSchema = z.object({
   descripcionIncluyeAnexo: boolField,
   objetivos: longTextField,
   objetivosIncluyeAnexo: boolField,
-  tipoErogacion: textField,         // value de TIPOS_EROGACION
-  modalidadEvaluacion: textField,   // value de MODALIDADES_EVALUACION
+  tipoErogacion: textField,
+  modalidadEvaluacion: textField,
 });
 
 // ─── Características básicas ────────────────────────────────────────────────
 const caracteristicasSchema = z.object({
-  mesInicio: textField,          // YYYY-MM
+  mesInicio: textField,
   mesFinErogacion: textField,
   mesFinProyecto: textField,
 });
@@ -93,8 +93,8 @@ const infoTISchema = z.object({
 // ─── B. Evaluación económica ────────────────────────────────────────────────
 const evaluacionSchema = z.object({
   horizonteMeses: numberField,
-  tir: numberField,            // % anual
-  tasaCorte: numberField,      // %
+  tir: numberField,
+  tasaCorte: numberField,
   van: moneyField,
   periodoRepagoMeses: numberField,
 });
@@ -106,7 +106,7 @@ const opinionesSchema = z.object({
   areasApoyo: longTextField,
 });
 
-// ─── C. Autorizaciones (la firma va en papel; solo guardamos la fecha) ──────
+// ─── C. Autorizaciones ──────────────────────────────────────────────────────
 const autorizacionSchema = z.object({
   fecha: textField,
 });
@@ -133,9 +133,100 @@ export const caratulaSchema = z.object({
   autorizaciones: autorizacionesSchema.default({}),
 });
 
-// ─── Proyecto (root) ────────────────────────────────────────────────────────
-// meta + caratula. En V3 se sumarán `detalleMensual` y `anexosActivos` como
-// sub-objetos opcionales sin tocar lo existente.
+// ═══════════════════════════════════════════════════════════════════════════
+// Solapa 2 — Detalle Mensual
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Los 12 meses del año calendario. Las claves son las abreviaturas en español
+ * para que el JSON en localStorage sea legible.
+ */
+export const MESES_KEYS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+] as const;
+export type MesKey = (typeof MESES_KEYS)[number];
+
+const mesesMontoSchema = z.object({
+  ene: moneyField, feb: moneyField, mar: moneyField, abr: moneyField,
+  may: moneyField, jun: moneyField, jul: moneyField, ago: moneyField,
+  sep: moneyField, oct: moneyField, nov: moneyField, dic: moneyField,
+});
+
+/**
+ * Una fila mensual del Detalle. Algunas filas tienen label fijo (Hardware,
+ * Software, etc.) y otras son "Detallar" con label editable por el usuario.
+ */
+const filaDetalleSchema = z.object({
+  label: textField,        // solo usado cuando la fila tiene label editable
+  meses: mesesMontoSchema.default({}),
+});
+
+export const detalleMensualSchema = z.object({
+  proyecto: textField,     // se pre-carga de caratula.descripcion.denominacion
+  inversion: z.object({
+    tecnologia: z.object({
+      hardware: filaDetalleSchema.default({}),
+      software: filaDetalleSchema.default({}),
+      licencias: filaDetalleSchema.default({}),
+      apoyoExterno: filaDetalleSchema.default({}),
+      otros: filaDetalleSchema.default({}),
+    }).default({}),
+    bienesUso: z.object({
+      fila1: filaDetalleSchema.default({}),
+      fila2: filaDetalleSchema.default({}),
+    }).default({}),
+    obras: z.object({
+      fila1: filaDetalleSchema.default({}),
+      fila2: filaDetalleSchema.default({}),
+    }).default({}),
+  }).default({}),
+  noActivable: z.object({
+    capacitacion: filaDetalleSchema.default({}),
+    movilidades: filaDetalleSchema.default({}),
+    refacciones: filaDetalleSchema.default({}),
+    otros: filaDetalleSchema.default({}),
+  }).default({}),
+  impacto: z.object({
+    ingresosIncrementales: filaDetalleSchema.default({}),
+    ahorroGastos: filaDetalleSchema.default({}),
+    gastosCorrientes: filaDetalleSchema.default({}),
+    amortizacion: filaDetalleSchema.default({}),
+  }).default({}),
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Solapa 3 — Anexos Activos
+// ═══════════════════════════════════════════════════════════════════════════
+
+const filaAnexoSchema = z.object({
+  id: z.string(),
+  concepto: textField,
+  cantidad: numberField,
+  costoUnitario: moneyField,       // en m$
+  meses: mesesMontoSchema.default({}),
+  anioMas1: moneyField,
+  anioMas2: moneyField,
+});
+
+const subSeccionAnexoSchema = z.object({
+  filas: z.array(filaAnexoSchema).default([]),
+});
+
+export const anexosActivosSchema = z.object({
+  proyecto: textField,
+  hardware: subSeccionAnexoSchema.default({}),
+  software: subSeccionAnexoSchema.default({}),
+  desarrollosExternos: subSeccionAnexoSchema.default({}),
+  otrosTecnologicos: subSeccionAnexoSchema.default({}),
+  bienesUso: subSeccionAnexoSchema.default({}),
+  obras: subSeccionAnexoSchema.default({}),
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Proyecto (root)
+// ═══════════════════════════════════════════════════════════════════════════
+
 export const proyectoSchema = z.object({
   meta: z
     .object({
@@ -146,12 +237,17 @@ export const proyectoSchema = z.object({
     })
     .default({}),
   caratula: caratulaSchema.default({}),
-  // detalleMensual: detalleMensualSchema.optional(), // V3
-  // anexosActivos: anexosActivosSchema.optional(),   // V3
+  detalleMensual: detalleMensualSchema.default({}),
+  anexosActivos: anexosActivosSchema.default({}),
 });
 
 export type Proyecto = z.infer<typeof proyectoSchema>;
 export type Caratula = z.infer<typeof caratulaSchema>;
+export type DetalleMensual = z.infer<typeof detalleMensualSchema>;
+export type AnexosActivos = z.infer<typeof anexosActivosSchema>;
+export type FilaDetalle = z.infer<typeof filaDetalleSchema>;
+export type FilaAnexo = z.infer<typeof filaAnexoSchema>;
+export type MesesMonto = z.infer<typeof mesesMontoSchema>;
 export type ConceptoMonto = z.infer<typeof conceptoMontoSchema>;
 export type FilaResumen = z.infer<typeof filaResumenSchema>;
 
@@ -166,13 +262,36 @@ export function crearProyectoVacio(): Proyecto {
 /**
  * Genera un ID estable para los items de listas dinámicas.
  */
+function nuevoId(prefix: string): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function nuevoConceptoMonto(): ConceptoMonto {
+  return { id: nuevoId('cm'), concepto: '', monto: undefined };
+}
+
+export function nuevaFilaAnexo(): FilaAnexo {
   return {
-    id:
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `cm-${Math.random().toString(36).slice(2, 10)}`,
+    id: nuevoId('anx'),
     concepto: '',
-    monto: undefined,
+    cantidad: undefined,
+    costoUnitario: undefined,
+    meses: {
+      ene: undefined, feb: undefined, mar: undefined, abr: undefined,
+      may: undefined, jun: undefined, jul: undefined, ago: undefined,
+      sep: undefined, oct: undefined, nov: undefined, dic: undefined,
+    },
+    anioMas1: undefined,
+    anioMas2: undefined,
   };
 }
+
+/** Etiquetas de meses en castellano (para UI y PDF). */
+export const MESES_LABELS: Record<MesKey, string> = {
+  ene: 'Ene', feb: 'Feb', mar: 'Mar', abr: 'Abr',
+  may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Ago',
+  sep: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dic',
+};

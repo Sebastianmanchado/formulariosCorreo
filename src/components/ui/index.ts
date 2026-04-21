@@ -11,3 +11,4 @@ export { SectionTitle } from './SectionTitle';
 export { Card } from './Card';
 export { Field } from './Field';
 export { SaveIndicator } from './SaveIndicator';
+export { Tabs } from './Tabs';

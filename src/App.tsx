@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { FormProvider } from 'react-hook-form';
+import { AnexosActivosForm } from './components/forms/AnexosActivosForm';
 import { CaratulaForm } from './components/forms/CaratulaForm';
+import { DetalleMensualForm } from './components/forms/DetalleMensualForm';
 import { PdfPreview } from './components/PdfPreview';
-import { SaveIndicator } from './components/ui';
+import { SaveIndicator, Tabs } from './components/ui';
 import {
   loadProyectoFromStorage,
   useProyectoPersist,
@@ -14,11 +16,14 @@ import { generateProyectoPdf } from './utils/pdfGenerator';
 
 type PdfState = { generating: false } | { generating: true; values: Proyecto };
 
+type TabKey = 'caratula' | 'detalle' | 'anexos';
+
 export default function App() {
   const [initial] = useState(() => loadProyectoFromStorage());
   const methods = useProyectoForm(initial);
   const persist = useProyectoPersist(methods);
 
+  const [tab, setTab] = useState<TabKey>('caratula');
   const pdfRootRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PdfState>({ generating: false });
 
@@ -29,21 +34,16 @@ export default function App() {
     if (!ok) return;
     methods.reset(crearProyectoVacio());
     persist.clearStorage();
+    setTab('caratula');
   };
 
   const handleGeneratePdf = async () => {
-    // Flush al storage antes de exportar.
     persist.saveNow();
-
     const values = methods.getValues();
     setPdf({ generating: true, values });
-
-    // Dejamos que React monte el PdfPreview, las fuentes carguen y el layout
-    // se estabilice antes de que html2canvas capture.
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     );
-
     try {
       const root = pdfRootRef.current;
       if (root) {
@@ -71,11 +71,32 @@ export default function App() {
           onReset={handleReset}
           onGeneratePdf={handleGeneratePdf}
         />
-        <main className="mx-auto max-w-[1100px] px-6 py-6">
-          <form onSubmit={(e) => e.preventDefault()} noValidate>
-            <CaratulaForm />
-          </form>
-        </main>
+
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as TabKey)}
+          className="no-print"
+        >
+          <Tabs.List>
+            <Tabs.Trigger value="caratula">① Carátula</Tabs.Trigger>
+            <Tabs.Trigger value="detalle">② Detalle Mensual</Tabs.Trigger>
+            <Tabs.Trigger value="anexos">③ Anexos Activos</Tabs.Trigger>
+          </Tabs.List>
+
+          <main className="mx-auto max-w-[1100px] px-6 py-6">
+            <form onSubmit={(e) => e.preventDefault()} noValidate>
+              <Tabs.Panel value="caratula">
+                <CaratulaForm />
+              </Tabs.Panel>
+              <Tabs.Panel value="detalle">
+                <DetalleMensualForm />
+              </Tabs.Panel>
+              <Tabs.Panel value="anexos">
+                <AnexosActivosForm />
+              </Tabs.Panel>
+            </form>
+          </main>
+        </Tabs>
 
         {/* PdfPreview off-screen: se monta solo durante la generación. */}
         {pdf.generating && (
