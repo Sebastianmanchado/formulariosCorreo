@@ -36,18 +36,19 @@ export function DynamicList({
       )}
 
       {fields.map((f, i) => (
-        <div key={f.id} className="flex items-center gap-2">
+        <div
+          key={f.id}
+          className="grid grid-cols-[2fr_1fr_32px] items-center gap-2"
+        >
           <Input
             {...register(
               `${name}.${i}.concepto` as FieldPath<Proyecto>
             )}
             placeholder={conceptoPlaceholder}
-            className="flex-1"
           />
           <MoneyInput
             control={control}
             name={`${name}.${i}.monto` as FieldPath<Proyecto>}
-            className="w-40"
             placeholder="0"
           />
           <button

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { todayISO } from '../utils/formatters';
 
 /**
  * Monto en miles de pesos (m$). El valor puede quedar vacío mientras el usuario
@@ -20,19 +21,47 @@ const boolField = z.boolean().optional().default(false);
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 const encabezadoSchema = z.object({
-  fecha: textField,
+  /** Default: hoy en local ISO. Solo se completa al crear un borrador nuevo;
+   *  si el usuario ya guardó una fecha distinta, esa persiste. */
+  fecha: z.string().optional().default(() => todayISO()),
   direccion: textField,
   gerencia: textField,
   ot: textField,
 });
 
+/** Máximo de caracteres para Descripción y Objetivos de la Carátula. */
+export const DESCRIPCION_MAX = 2000;
+
+const longTextCappedField = z
+  .string()
+  .max(DESCRIPCION_MAX)
+  .optional()
+  .default('');
+
+/**
+ * Metadatos de un archivo adjunto. El blob (File) vive en memoria
+ * (ver `hooks/useAttachments.ts`) — acá sólo persistimos nombre, tipo y
+ * tamaño para que el borrador muestre la lista aunque el archivo real no
+ * esté disponible tras recargar.
+ */
+const archivoMetaSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  size: z.number(),
+});
+
+export type ArchivoMeta = z.infer<typeof archivoMetaSchema>;
+
 // ─── A. Descripción general ─────────────────────────────────────────────────
 const descripcionSchema = z.object({
   denominacion: textField,
-  descripcion: longTextField,
+  descripcion: longTextCappedField,
   descripcionIncluyeAnexo: boolField,
-  objetivos: longTextField,
+  descripcionAnexos: z.array(archivoMetaSchema).default([]),
+  objetivos: longTextCappedField,
   objetivosIncluyeAnexo: boolField,
+  objetivosAnexos: z.array(archivoMetaSchema).default([]),
   tipoErogacion: textField,
   modalidadEvaluacion: textField,
 });
@@ -107,9 +136,10 @@ const opinionesSchema = z.object({
 });
 
 // ─── C. Autorizaciones ──────────────────────────────────────────────────────
-const autorizacionSchema = z.object({
-  fecha: textField,
-});
+// La firma + fecha se completan a mano tras imprimir, así que no guardamos
+// nada del lado del form. El schema queda como objeto vacío por extensibilidad
+// futura (y para que la migración de borradores v2 no rompa).
+const autorizacionSchema = z.object({}).partial();
 
 const autorizacionesSchema = z.object({
   gerenciaProponente: autorizacionSchema.default({}),
@@ -271,6 +301,15 @@ function nuevoId(prefix: string): string {
 
 export function nuevoConceptoMonto(): ConceptoMonto {
   return { id: nuevoId('cm'), concepto: '', monto: undefined };
+}
+
+export function nuevoArchivoMeta(file: File): ArchivoMeta {
+  return {
+    id: nuevoId('att'),
+    name: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+  };
 }
 
 export function nuevaFilaAnexo(): FilaAnexo {

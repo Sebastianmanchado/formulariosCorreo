@@ -1,6 +1,7 @@
 export { Input } from './Input';
 export { Select } from './Select';
 export { TextArea } from './TextArea';
+export { TextAreaWithCount } from './TextAreaWithCount';
 export { Checkbox } from './Checkbox';
 export { MoneyInput } from './MoneyInput';
 export { CalculatedField } from './CalculatedField';
@@ -12,3 +13,4 @@ export { Card } from './Card';
 export { Field } from './Field';
 export { SaveIndicator } from './SaveIndicator';
 export { Tabs } from './Tabs';
+export { FileDropBox } from './FileDropBox';

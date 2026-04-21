@@ -1,9 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useFormContext, type FieldPath } from 'react-hook-form';
 import {
   useDetalleTotales,
   type PerColumn,
 } from '../../hooks/useCalculatedTotals';
+import { useGridNavigation } from '../../hooks/useGridNavigation';
 import {
   MESES_KEYS,
   MESES_LABELS,
@@ -15,6 +16,8 @@ import { Input, MoneyInput, SectionTitle } from '../ui';
 export function DetalleMensualForm() {
   const { register, getValues, setValue } = useFormContext<Proyecto>();
   const totales = useDetalleTotales();
+  const tableRef = useRef<HTMLDivElement>(null);
+  useGridNavigation(tableRef);
 
   // Pre-cargar "Proyecto" desde caratula.descripcion.denominacion solo una vez
   // al montar y solo si el campo está vacío — no queremos pisar ediciones
@@ -47,7 +50,10 @@ export function DetalleMensualForm() {
 
       <SectionTitle>Detalle Mensual por Concepto</SectionTitle>
 
-      <div className="overflow-x-auto rounded-sm border border-border bg-white">
+      <div
+        ref={tableRef}
+        className="overflow-x-auto rounded-sm border border-border bg-white"
+      >
         <table
           className="w-full border-collapse"
           style={{ tableLayout: 'fixed', minWidth: '1180px' }}
@@ -80,30 +86,35 @@ export function DetalleMensualForm() {
               label="Hardware"
               basePath="detalleMensual.inversion.tecnologia.hardware"
               rowTotal={totales.rowTotals.hardware}
+              gridRow={0}
             />
             <DataRow
               number="1.2"
               label="Software"
               basePath="detalleMensual.inversion.tecnologia.software"
               rowTotal={totales.rowTotals.software}
+              gridRow={1}
             />
             <DataRow
               number="1.3"
               label="Licencias"
               basePath="detalleMensual.inversion.tecnologia.licencias"
               rowTotal={totales.rowTotals.licencias}
+              gridRow={2}
             />
             <DataRow
               number="1.4"
               label="Apoyo externo"
               basePath="detalleMensual.inversion.tecnologia.apoyoExterno"
               rowTotal={totales.rowTotals.apoyoExterno}
+              gridRow={3}
             />
             <DataRow
               number="1.5"
               label="Otros"
               basePath="detalleMensual.inversion.tecnologia.otros"
               rowTotal={totales.rowTotals.otros}
+              gridRow={4}
             />
 
             <GroupRow label="2. Egresos en bienes de uso varios" />
@@ -113,6 +124,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.inversion.bienesUso.fila1"
               rowTotal={totales.rowTotals.bienesUso1}
+              gridRow={5}
             />
             <DataRow
               number="2.2"
@@ -120,6 +132,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.inversion.bienesUso.fila2"
               rowTotal={totales.rowTotals.bienesUso2}
+              gridRow={6}
             />
 
             <GroupRow label="3. Egresos en Obras (no mantenimiento)" />
@@ -129,6 +142,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.inversion.obras.fila1"
               rowTotal={totales.rowTotals.obras1}
+              gridRow={7}
             />
             <DataRow
               number="3.2"
@@ -136,6 +150,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.inversion.obras.fila2"
               rowTotal={totales.rowTotals.obras2}
+              gridRow={8}
             />
 
             <TotalRow label="Total a.1" per={totales.totalA1} />
@@ -146,18 +161,21 @@ export function DetalleMensualForm() {
               label="Capacitación externa"
               basePath="detalleMensual.noActivable.capacitacion"
               rowTotal={totales.rowTotals.capacitacion}
+              gridRow={9}
             />
             <DataRow
               number="5"
               label="Movilidades"
               basePath="detalleMensual.noActivable.movilidades"
               rowTotal={totales.rowTotals.movilidades}
+              gridRow={10}
             />
             <DataRow
               number="6"
               label="Refacciones y obras menores no activables"
               basePath="detalleMensual.noActivable.refacciones"
               rowTotal={totales.rowTotals.refacciones}
+              gridRow={11}
             />
             <DataRow
               number="7"
@@ -165,6 +183,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Otros (detallar)"
               basePath="detalleMensual.noActivable.otros"
               rowTotal={totales.rowTotals.otrosNoActivable}
+              gridRow={12}
             />
 
             <TotalRow label="Total a.2" per={totales.totalA2} />
@@ -183,6 +202,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.impacto.ingresosIncrementales"
               rowTotal={totales.rowTotals.ingresosIncrementales}
+              gridRow={13}
             />
 
             <SubSectionRow label="b.2) Ahorro en Gastos Corrientes que ocasionará el proyecto" />
@@ -191,6 +211,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.impacto.ahorroGastos"
               rowTotal={totales.rowTotals.ahorroGastos}
+              gridRow={14}
             />
 
             <MirrorRow label="b.3) Inversión no activable (= a.2)" per={totales.b3} />
@@ -201,6 +222,7 @@ export function DetalleMensualForm() {
               labelPlaceholder="Detallar"
               basePath="detalleMensual.impacto.gastosCorrientes"
               rowTotal={totales.rowTotals.gastosCorrientes}
+              gridRow={15}
             />
 
             <DataRow
@@ -208,6 +230,7 @@ export function DetalleMensualForm() {
               label="Amortización de la inversión activable"
               basePath="detalleMensual.impacto.amortizacion"
               rowTotal={totales.rowTotals.amortizacion}
+              gridRow={16}
             />
 
             <TotalRow
@@ -290,6 +313,7 @@ function DataRow({
   labelPlaceholder = 'Detallar',
   basePath,
   rowTotal,
+  gridRow,
 }: {
   number?: string;
   label?: string;
@@ -297,6 +321,8 @@ function DataRow({
   labelPlaceholder?: string;
   basePath: string;
   rowTotal: number;
+  /** Índice de fila para useGridNavigation. */
+  gridRow: number;
 }) {
   const { register, control } = useFormContext<Proyecto>();
   return (
@@ -312,6 +338,8 @@ function DataRow({
             <input
               {...register(`${basePath}.label` as FieldPath<Proyecto>)}
               placeholder={labelPlaceholder}
+              data-grid-row={gridRow}
+              data-grid-col={0}
               className="flex-1 bg-transparent text-[11px] outline-none placeholder:italic placeholder:text-ink-muted/60 focus:bg-accent/5"
             />
           ) : (
@@ -319,11 +347,13 @@ function DataRow({
           )}
         </div>
       </td>
-      {MESES_KEYS.map((m) => (
+      {MESES_KEYS.map((m, i) => (
         <td key={m} className="border-b border-r border-border p-0">
           <MoneyInput
             control={control}
             name={`${basePath}.meses.${m}` as FieldPath<Proyecto>}
+            gridRow={gridRow}
+            gridCol={i + 1}
             inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
           />
         </td>

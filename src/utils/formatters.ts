@@ -109,6 +109,19 @@ export function formatMonth(ym: string | null | undefined): string {
 }
 
 /**
+ * Fecha de hoy en ISO (YYYY-MM-DD), usando zona horaria local —
+ * importante para que el `<input type="date">` y el tope `max` coincidan con
+ * lo que ve el usuario (evita bugs en tz distintas a UTC).
+ */
+export function todayISO(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Slug para nombre de archivo PDF.
  */
 export function slugify(s: string | null | undefined): string {

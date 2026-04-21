@@ -457,9 +457,17 @@ function CaratulaPage3({ values }: { values: Proyecto }) {
                 marginBottom: '2mm',
               }}
             />
-            <div style={{ fontSize: '8pt', color: '#6b6158' }}>
-              Fecha:{' '}
-              {formatDateAR(c?.autorizaciones?.[a.key]?.fecha) || '____________'}
+            <div
+              style={{
+                fontSize: '8pt',
+                color: '#6b6158',
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '2mm',
+              }}
+            >
+              <span>Fecha:</span>
+              <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
             </div>
           </div>
         ))}

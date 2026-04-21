@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import {
   useFieldArray,
   useFormContext,
@@ -10,6 +10,7 @@ import {
   type AnexoSectionKey,
   type AnexoSectionTotals,
 } from '../../hooks/useCalculatedTotals';
+import { useGridNavigation } from '../../hooks/useGridNavigation';
 import {
   MESES_KEYS,
   MESES_LABELS,
@@ -121,6 +122,9 @@ function SubseccionTable({
     keyName: 'rhfId',
   });
 
+  const tableRef = useRef<HTMLDivElement>(null);
+  useGridNavigation(tableRef);
+
   return (
     <div className="mb-5">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -136,7 +140,10 @@ function SubseccionTable({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-sm border border-border bg-white">
+      <div
+        ref={tableRef}
+        className="overflow-x-auto rounded-sm border border-border bg-white"
+      >
         <table
           className="w-full border-collapse"
           style={{ tableLayout: 'fixed', minWidth: '1380px' }}
@@ -195,6 +202,8 @@ function SubseccionTable({
                         `${basePath}.${i}.concepto` as FieldPath<Proyecto>
                       )}
                       placeholder="Concepto"
+                      data-grid-row={i}
+                      data-grid-col={0}
                       className="h-[28px] w-full border-0 bg-transparent px-2 text-[11px] outline-none placeholder:italic placeholder:text-ink-muted/60 focus:bg-accent/5"
                     />
                   </td>
@@ -211,6 +220,8 @@ function SubseccionTable({
                               : Number(v),
                         }
                       )}
+                      data-grid-row={i}
+                      data-grid-col={1}
                       className="h-[28px] w-full border-0 bg-transparent px-1 text-right font-mono text-[10px] outline-none focus:bg-accent/5"
                     />
                   </td>
@@ -220,13 +231,15 @@ function SubseccionTable({
                       name={
                         `${basePath}.${i}.costoUnitario` as FieldPath<Proyecto>
                       }
+                      gridRow={i}
+                      gridCol={2}
                       inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
                     />
                   </td>
                   <td className="border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right font-mono text-[10px] font-semibold text-accent">
                     {formatMoneyZero(costoTotal)}
                   </td>
-                  {MESES_KEYS.map((m) => (
+                  {MESES_KEYS.map((m, mi) => (
                     <td
                       key={m}
                       className="border-b border-r border-border p-0"
@@ -236,6 +249,8 @@ function SubseccionTable({
                         name={
                           `${basePath}.${i}.meses.${m}` as FieldPath<Proyecto>
                         }
+                        gridRow={i}
+                        gridCol={4 + mi}
                         inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
                       />
                     </td>
@@ -247,6 +262,8 @@ function SubseccionTable({
                     <MoneyInput
                       control={control}
                       name={`${basePath}.${i}.anioMas1` as FieldPath<Proyecto>}
+                      gridRow={i}
+                      gridCol={17}
                       inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
                     />
                   </td>
@@ -254,6 +271,8 @@ function SubseccionTable({
                     <MoneyInput
                       control={control}
                       name={`${basePath}.${i}.anioMas2` as FieldPath<Proyecto>}
+                      gridRow={i}
+                      gridCol={18}
                       inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
                     />
                   </td>

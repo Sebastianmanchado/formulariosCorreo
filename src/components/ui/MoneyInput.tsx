@@ -17,6 +17,9 @@ type InnerProps = {
   suffix?: string;
   disabled?: boolean;
   id?: string;
+  /** Coordenadas para useGridNavigation (opcional). */
+  gridRow?: number;
+  gridCol?: number;
 };
 
 /**
@@ -35,6 +38,8 @@ function MoneyInputInner({
   suffix,
   disabled,
   id,
+  gridRow,
+  gridCol,
 }: InnerProps) {
   const [focused, setFocused] = useState(false);
   const [raw, setRaw] = useState<string>(() =>
@@ -59,6 +64,8 @@ function MoneyInputInner({
         inputMode="decimal"
         disabled={disabled}
         placeholder={placeholder}
+        data-grid-row={gridRow}
+        data-grid-col={gridCol}
         value={display}
         onFocus={() => {
           setFocused(true);
@@ -96,6 +103,8 @@ type Props<T extends FieldValues> = {
   suffix?: string;
   disabled?: boolean;
   id?: string;
+  gridRow?: number;
+  gridCol?: number;
 };
 
 export function MoneyInput<T extends FieldValues>({

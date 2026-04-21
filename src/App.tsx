@@ -6,22 +6,36 @@ import { DetalleMensualForm } from './components/forms/DetalleMensualForm';
 import { PdfPreview } from './components/PdfPreview';
 import { SaveIndicator, Tabs } from './components/ui';
 import {
+  AttachmentsProvider,
+  useAttachments,
+  type AttachmentsApi,
+} from './hooks/useAttachments';
+import {
   loadProyectoFromStorage,
   useProyectoPersist,
   type PersistApi,
 } from './hooks/useLocalStorage';
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
-import { generateProyectoPdf } from './utils/pdfGenerator';
+import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 
 type PdfState = { generating: false } | { generating: true; values: Proyecto };
 
 type TabKey = 'caratula' | 'detalle' | 'anexos';
 
 export default function App() {
+  return (
+    <AttachmentsProvider>
+      <AppInner />
+    </AttachmentsProvider>
+  );
+}
+
+function AppInner() {
   const [initial] = useState(() => loadProyectoFromStorage());
   const methods = useProyectoForm(initial);
   const persist = useProyectoPersist(methods);
+  const attachments = useAttachments();
 
   const [tab, setTab] = useState<TabKey>('caratula');
   const pdfRootRef = useRef<HTMLDivElement>(null);
@@ -34,6 +48,7 @@ export default function App() {
     if (!ok) return;
     methods.reset(crearProyectoVacio());
     persist.clearStorage();
+    attachments.clearAll();
     setTab('caratula');
   };
 
@@ -49,6 +64,7 @@ export default function App() {
       if (root) {
         await generateProyectoPdf(root, {
           nombreProyecto: values.caratula?.descripcion?.denominacion,
+          attachments: buildAttachmentGroups(values, attachments),
         });
       }
     } catch (err) {
@@ -170,6 +186,29 @@ function Topbar({
       </div>
     </header>
   );
+}
+
+function buildAttachmentGroups(
+  values: Proyecto,
+  attachments: AttachmentsApi
+): AttachmentGroup[] {
+  const desc = values.caratula?.descripcion;
+  return [
+    {
+      label: 'Descripción',
+      items: (desc?.descripcionAnexos ?? []).map((meta) => ({
+        meta,
+        blob: attachments.getBlob(meta.id),
+      })),
+    },
+    {
+      label: 'Objetivos y justificación',
+      items: (desc?.objetivosAnexos ?? []).map((meta) => ({
+        meta,
+        blob: attachments.getBlob(meta.id),
+      })),
+    },
+  ];
 }
 
 function PrinterIcon() {

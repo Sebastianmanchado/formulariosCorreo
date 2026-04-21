@@ -1,13 +1,15 @@
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { MODALIDADES_EVALUACION, TIPOS_EROGACION, AUTORIZACIONES } from '../../data/constants';
-import type { Proyecto } from '../../schemas/proyecto';
+import { DESCRIPCION_MAX, type Proyecto } from '../../schemas/proyecto';
 import { useCalculatedTotals } from '../../hooks/useCalculatedTotals';
+import { todayISO } from '../../utils/formatters';
 import {
   CalculatedField,
   Card,
   Checkbox,
   DynamicList,
   Field,
+  FileDropBox,
   Input,
   MoneyInput,
   OrganigramaSelect,
@@ -15,6 +17,7 @@ import {
   Select,
   SignatureBox,
   TextArea,
+  TextAreaWithCount,
 } from '../ui';
 
 export function CaratulaForm() {
@@ -36,11 +39,12 @@ export function CaratulaForm() {
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 function EncabezadoSection() {
   const { register } = useFormContext<Proyecto>();
+  const today = todayISO();
   return (
     <Card>
       <div className="grid gap-3 md:grid-cols-[180px_1fr_160px]">
         <Field label="Fecha" bold orientation="column">
-          <Input type="date" {...register('caratula.encabezado.fecha')} />
+          <Input type="date" max={today} {...register('caratula.encabezado.fecha')} />
         </Field>
         <div>
           <OrganigramaSelect />
@@ -55,7 +59,15 @@ function EncabezadoSection() {
 
 // ─── A. Descripción general ─────────────────────────────────────────────────
 function DescripcionGeneralSection() {
-  const { register } = useFormContext<Proyecto>();
+  const { register, control } = useFormContext<Proyecto>();
+  const descIncluyeAnexo = useWatch({
+    control,
+    name: 'caratula.descripcion.descripcionIncluyeAnexo',
+  });
+  const objIncluyeAnexo = useWatch({
+    control,
+    name: 'caratula.descripcion.objetivosIncluyeAnexo',
+  });
   return (
     <>
       <SectionTitle>A. Descripción General</SectionTitle>
@@ -67,25 +79,39 @@ function DescripcionGeneralSection() {
         <hr className="my-3 border-border" />
 
         <Field label="Descripción" bold labelWidth="220px">
-          <TextArea rows={3} {...register('caratula.descripcion.descripcion')} />
+          <TextAreaWithCount<Proyecto>
+            name="caratula.descripcion.descripcion"
+            maxLength={DESCRIPCION_MAX}
+            rows={3}
+          />
           <div className="mt-1.5">
             <Checkbox
               label="La descripción incluye un anexo adjunto"
               {...register('caratula.descripcion.descripcionIncluyeAnexo')}
             />
           </div>
+          {descIncluyeAnexo && (
+            <FileDropBox<Proyecto> name="caratula.descripcion.descripcionAnexos" />
+          )}
         </Field>
 
         <hr className="my-3 border-border" />
 
         <Field label="Objetivos y justificación" bold labelWidth="220px">
-          <TextArea rows={3} {...register('caratula.descripcion.objetivos')} />
+          <TextAreaWithCount<Proyecto>
+            name="caratula.descripcion.objetivos"
+            maxLength={DESCRIPCION_MAX}
+            rows={3}
+          />
           <div className="mt-1.5">
             <Checkbox
               label="Los objetivos incluyen un anexo adjunto"
               {...register('caratula.descripcion.objetivosIncluyeAnexo')}
             />
           </div>
+          {objIncluyeAnexo && (
+            <FileDropBox<Proyecto> name="caratula.descripcion.objetivosAnexos" />
+          )}
         </Field>
 
         <hr className="my-3 border-border" />
@@ -465,20 +491,15 @@ function OpinionesSection() {
 
 // ─── C. Autorizaciones ──────────────────────────────────────────────────────
 function AutorizacionesSection() {
-  const { register } = useFormContext<Proyecto>();
   return (
     <>
       <SectionTitle>C. Autorizaciones</SectionTitle>
       <div className="mb-3 text-[11px] italic text-ink-muted">
-        Las firmas se completan en papel tras imprimir el formulario.
+        Las firmas y fechas se completan a mano tras imprimir el formulario.
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {AUTORIZACIONES.map((a) => (
-          <SignatureBox
-            key={a.key}
-            title={a.label}
-            dateInputProps={register(`caratula.autorizaciones.${a.key}.fecha` as const)}
-          />
+          <SignatureBox key={a.key} title={a.label} />
         ))}
       </div>
     </>
@@ -488,6 +509,11 @@ function AutorizacionesSection() {
 // ─── Helpers locales ────────────────────────────────────────────────────────
 import type { Control, FieldPath } from 'react-hook-form';
 
+/**
+ * Fila de "label + MoneyInput" con grid de 2 columnas. La columna del input
+ * tiene ancho fijo así todas las filas del bloque (Hardware, Software, Otros,
+ * etc.) arrancan el input exactamente en el mismo x.
+ */
 function MoneyRow({
   label,
   control,
@@ -498,9 +524,9 @@ function MoneyRow({
   name: FieldPath<Proyecto>;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="flex-1 text-[12px]">{label}</span>
-      <MoneyInput control={control} name={name} className="w-40" />
+    <div className="grid grid-cols-[1fr_170px] items-center gap-3">
+      <span className="text-[12px]">{label}</span>
+      <MoneyInput control={control} name={name} />
     </div>
   );
 }
@@ -519,12 +545,12 @@ function TotalRow({
   const isStrong = emphasis === 'strong';
   return (
     <div
-      className={`flex items-center gap-2 border-t border-border pt-1.5 ${className}`}
+      className={`grid grid-cols-[1fr_170px] items-center gap-3 border-t border-border pt-1.5 ${className}`}
     >
-      <span className={`flex-1 text-[12px] ${isStrong ? 'font-bold' : 'font-semibold'}`}>
+      <span className={`text-[12px] ${isStrong ? 'font-bold' : 'font-semibold'}`}>
         {label}
       </span>
-      <CalculatedField value={value} emphasis={emphasis} className="w-40" />
+      <CalculatedField value={value} emphasis={emphasis} />
     </div>
   );
 }
