@@ -143,6 +143,13 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
       });
     }
 
+    // ─── Autorizaciones (última página, portrait) ─────────────────────────
+    list.push({
+      key: 'autorizaciones',
+      orientation: 'portrait',
+      content: <AutorizacionesPage />,
+    });
+
     return list;
   }, [values, totalesCaratula, totalesDetalle, totalesAnexos]);
 
