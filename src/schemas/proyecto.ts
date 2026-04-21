@@ -19,11 +19,21 @@ const textField = z.string().optional().default('');
 const longTextField = z.string().optional().default('');
 const boolField = z.boolean().optional().default(false);
 
+/**
+ * Campo fecha con default "hoy" robusto:
+ *  • Si está ausente → default.
+ *  • Si es '' o null (borrador v2 viejo con fecha vacía) → preprocesa a
+ *    undefined para que el default se dispare.
+ *  • Si tiene un valor guardado (YYYY-MM-DD) → respeta ese valor.
+ */
+const fechaHoyField = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.string().optional().default(() => todayISO())
+);
+
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 const encabezadoSchema = z.object({
-  /** Default: hoy en local ISO. Solo se completa al crear un borrador nuevo;
-   *  si el usuario ya guardó una fecha distinta, esa persiste. */
-  fecha: z.string().optional().default(() => todayISO()),
+  fecha: fechaHoyField,
   direccion: textField,
   gerencia: textField,
   ot: textField,

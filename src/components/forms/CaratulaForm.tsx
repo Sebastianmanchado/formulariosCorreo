@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from 'react-hook-form';
-import { MODALIDADES_EVALUACION, TIPOS_EROGACION, AUTORIZACIONES } from '../../data/constants';
+import { MODALIDADES_EVALUACION, TIPOS_EROGACION } from '../../data/constants';
 import { DESCRIPCION_MAX, type Proyecto } from '../../schemas/proyecto';
 import { useCalculatedTotals } from '../../hooks/useCalculatedTotals';
 import { todayISO } from '../../utils/formatters';
@@ -15,7 +15,6 @@ import {
   OrganigramaSelect,
   SectionTitle,
   Select,
-  SignatureBox,
   TextArea,
   TextAreaWithCount,
 } from '../ui';
@@ -31,7 +30,8 @@ export function CaratulaForm() {
       <InfoTISection />
       <EvaluacionEconomicaSection />
       <OpinionesSection />
-      <AutorizacionesSection />
+      {/* Las autorizaciones se movieron al final de la solapa "Anexos Activos"
+          para que queden como última página del PDF impreso. */}
     </div>
   );
 }
@@ -485,23 +485,6 @@ function OpinionesSection() {
           <TextArea rows={3} {...register('caratula.opiniones.areasApoyo')} />
         </Field>
       </Card>
-    </>
-  );
-}
-
-// ─── C. Autorizaciones ──────────────────────────────────────────────────────
-function AutorizacionesSection() {
-  return (
-    <>
-      <SectionTitle>C. Autorizaciones</SectionTitle>
-      <div className="mb-3 text-[11px] italic text-ink-muted">
-        Las firmas y fechas se completan a mano tras imprimir el formulario.
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {AUTORIZACIONES.map((a) => (
-          <SignatureBox key={a.key} title={a.label} />
-        ))}
-      </div>
     </>
   );
 }

@@ -415,36 +415,50 @@ function CaratulaPage3({ values }: { values: Proyecto }) {
           <Paragraph text={c?.opiniones?.areasApoyo} />
         </KVBlock>
       </KV>
+    </>
+  );
+}
 
-      <SectionTitle>C. Autorizaciones</SectionTitle>
-      <div style={{ fontSize: '8pt', color: '#6b6158', fontStyle: 'italic', marginBottom: '3mm' }}>
-        Las firmas se completan en papel tras imprimir el formulario.
+function AutorizacionesPage() {
+  return (
+    <>
+      <PageHeadingRow tag="C." title="Autorizaciones" />
+      <div
+        style={{
+          fontSize: '9pt',
+          color: '#6b6158',
+          fontStyle: 'italic',
+          marginTop: '3mm',
+          marginBottom: '6mm',
+        }}
+      >
+        Las firmas y fechas se completan a mano tras imprimir el formulario.
       </div>
-      <Grid cols="repeat(3, 1fr)" gap="5mm">
+      <Grid cols="repeat(2, 1fr)" gap="8mm">
         {AUTORIZACIONES.map((a) => (
           <div
             key={a.key}
             style={{
               border: '1px solid #c8c0b4',
               borderRadius: '2px',
-              padding: '3mm',
+              padding: '5mm',
               background: '#ffffff',
-              minHeight: '38mm',
+              minHeight: '55mm',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             <div
               style={{
-                fontSize: '7pt',
+                fontSize: '8.5pt',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 color: '#1a3a5c',
                 letterSpacing: '0.4px',
                 borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '2mm',
-                marginBottom: '3mm',
-                minHeight: '8mm',
+                paddingBottom: '3mm',
+                marginBottom: '5mm',
+                minHeight: '10mm',
               }}
             >
               {a.label}
@@ -453,17 +467,17 @@ function CaratulaPage3({ values }: { values: Proyecto }) {
             <div
               style={{
                 borderBottom: '1px solid #6b6158',
-                height: '14mm',
-                marginBottom: '2mm',
+                height: '20mm',
+                marginBottom: '3mm',
               }}
             />
             <div
               style={{
-                fontSize: '8pt',
+                fontSize: '9pt',
                 color: '#6b6158',
                 display: 'flex',
                 alignItems: 'baseline',
-                gap: '2mm',
+                gap: '3mm',
               }}
             >
               <span>Fecha:</span>
