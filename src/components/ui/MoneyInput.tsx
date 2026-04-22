@@ -67,9 +67,12 @@ function MoneyInputInner({
         data-grid-row={gridRow}
         data-grid-col={gridCol}
         value={display}
-        onFocus={() => {
+        onFocus={(e) => {
           setFocused(true);
           setRaw(value === null || value === undefined ? '' : String(value));
+          // Seleccionar todo al enfocar: así Delete/Backspace o cualquier
+          // tecla nueva sobrescribe el valor (UX tipo planilla).
+          e.currentTarget.select();
         }}
         onBlur={() => {
           setFocused(false);

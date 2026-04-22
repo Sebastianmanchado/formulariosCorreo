@@ -214,7 +214,7 @@ async function drawSeparatorPage(
 async function appendPdfPages(doc: PDFDocumentT, blob: File): Promise<void> {
   const { PDFDocument } = await import('pdf-lib');
   const bytes = await blob.arrayBuffer();
-  const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const src = await PDFDocument.load(bytes, { ignoreEncryption: false });
   const pages = await doc.copyPages(src, src.getPageIndices());
   for (const p of pages) doc.addPage(p);
 }

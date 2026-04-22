@@ -166,6 +166,8 @@ export const caratulaSchema = z.object({
   descripcion: descripcionSchema.default({}),
   caracteristicas: caracteristicasSchema.default({}),
   resumenMontos: resumenMontosSchema.default({}),
+  /** Cotización de referencia del dólar (pesos por USD). */
+  cotizacionUsd: moneyField,
   detalleInversion: detalleInversionSchema.default({}),
   infoTI: infoTISchema.default({}),
   evaluacion: evaluacionSchema.default({}),

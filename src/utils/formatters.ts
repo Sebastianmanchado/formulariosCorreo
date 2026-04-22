@@ -53,6 +53,41 @@ export function parseMoney(raw: string | null | undefined): number | undefined {
 }
 
 /**
+ * Convierte un monto en miles de pesos (m$) a USD usando una cotización
+ * pesos-por-dólar. Devuelve `null` si la cotización no está definida o es 0
+ * (para que la UI muestre "—" en lugar de un cero engañoso).
+ */
+export function toUsd(
+  amountInMiles: number | null | undefined,
+  cotizacionPesosPorUsd: number | null | undefined
+): number | null {
+  if (
+    !cotizacionPesosPorUsd ||
+    cotizacionPesosPorUsd === 0 ||
+    !Number.isFinite(cotizacionPesosPorUsd)
+  ) {
+    return null;
+  }
+  const m = amountInMiles ?? 0;
+  return (m * 1000) / cotizacionPesosPorUsd;
+}
+
+/**
+ * Igual que `toUsd` pero formatea el resultado para display ("1.234" o "—").
+ */
+export function formatUsdFromMiles(
+  amountInMiles: number | null | undefined,
+  cotizacionPesosPorUsd: number | null | undefined
+): string {
+  const v = toUsd(amountInMiles, cotizacionPesosPorUsd);
+  if (v === null) return '—';
+  return v.toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
  * Suma tolerante: ignora undefined / null / NaN.
  */
 export function sum(...values: Array<number | null | undefined>): number {

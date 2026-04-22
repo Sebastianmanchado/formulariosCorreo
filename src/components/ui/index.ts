@@ -14,3 +14,4 @@ export { Field } from './Field';
 export { SaveIndicator } from './SaveIndicator';
 export { Tabs } from './Tabs';
 export { FileDropBox } from './FileDropBox';
+export { MonthYearPicker } from './MonthYearPicker';
