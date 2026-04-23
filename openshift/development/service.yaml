@@ -1,0 +1,21 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: apemformularios
+  labels:
+    app: apemformularios
+spec:
+  ipFamilies:
+    - IPv4
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+  internalTrafficPolicy: Cluster
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  sessionAffinity: None
+  selector:
+    app: apemformularios
+    deployment: apemformularios
