@@ -6,14 +6,25 @@
 const AR_LOCALE = 'es-AR';
 
 /**
- * "1234.56" → "1.234,56".
+ * Unidad interna de los montos: **millones de pesos**. El valor almacenado
+ * `5` se interpreta como 5.000.000 de pesos.
+ * Los USD son valores absolutos (USD totales, no miles).
+ */
+
+/** Máximo de decimales para pesos (no redondear resultados). */
+const PESOS_MAX_FRACTION = 4;
+/** Máximo de decimales para USD (típico en USD). */
+const USD_MAX_FRACTION = 2;
+
+/**
+ * Formatea un monto en millones de pesos. Hasta 4 decimales.
  * Undefined / NaN / '' devuelven ''.
  */
 export function formatMoney(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return '';
   return n.toLocaleString(AR_LOCALE, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: PESOS_MAX_FRACTION,
   });
 }
 
@@ -53,12 +64,13 @@ export function parseMoney(raw: string | null | undefined): number | undefined {
 }
 
 /**
- * Convierte un monto en miles de pesos (m$) a USD usando una cotización
- * pesos-por-dólar. Devuelve `null` si la cotización no está definida o es 0
- * (para que la UI muestre "—" en lugar de un cero engañoso).
+ * Convierte un monto en **millones de pesos** a USD totales usando una
+ * cotización pesos-por-dólar.
+ *   USD = (millones_pesos × 1.000.000) / cotización
+ * Devuelve `null` si la cotización no es válida.
  */
 export function toUsd(
-  amountInMiles: number | null | undefined,
+  amountInMillions: number | null | undefined,
   cotizacionPesosPorUsd: number | null | undefined
 ): number | null {
   if (
@@ -68,22 +80,23 @@ export function toUsd(
   ) {
     return null;
   }
-  const m = amountInMiles ?? 0;
-  return (m * 1000) / cotizacionPesosPorUsd;
+  const m = amountInMillions ?? 0;
+  return (m * 1_000_000) / cotizacionPesosPorUsd;
 }
 
 /**
- * Igual que `toUsd` pero formatea el resultado para display ("1.234" o "—").
+ * Igual que `toUsd` pero formatea el resultado para display en USD totales
+ * con hasta 2 decimales (sin redondeo fuerte).
  */
 export function formatUsdFromMiles(
-  amountInMiles: number | null | undefined,
+  amountInMillions: number | null | undefined,
   cotizacionPesosPorUsd: number | null | undefined
 ): string {
-  const v = toUsd(amountInMiles, cotizacionPesosPorUsd);
+  const v = toUsd(amountInMillions, cotizacionPesosPorUsd);
   if (v === null) return '—';
-  return v.toLocaleString('es-AR', {
+  return v.toLocaleString(AR_LOCALE, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: USD_MAX_FRACTION,
   });
 }
 

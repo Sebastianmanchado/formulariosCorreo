@@ -2,7 +2,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { MODALIDADES_EVALUACION, TIPOS_EROGACION } from '../../data/constants';
 import { DESCRIPCION_MAX, type Proyecto } from '../../schemas/proyecto';
 import { useCalculatedTotals } from '../../hooks/useCalculatedTotals';
-import { formatUsdFromMiles, todayISO } from '../../utils/formatters';
+import { formatMoneyZero, formatUsdFromMiles, todayISO } from '../../utils/formatters';
 import {
   CalculatedField,
   Card,
@@ -12,6 +12,7 @@ import {
   FileDropBox,
   Input,
   MoneyInput,
+  MonedaToggle,
   MonthYearPicker,
   OrganigramaSelect,
   SectionTitle,
@@ -20,10 +21,16 @@ import {
   TextAreaWithCount,
 } from '../ui';
 
-export function CaratulaForm() {
+type CaratulaFormProps = {
+  /** Handler para cambiar la moneda; el padre confirma y resetea todo. */
+  onMonedaChange: (next: 'pesos' | 'usd') => void;
+};
+
+export function CaratulaForm({ onMonedaChange }: CaratulaFormProps) {
   return (
     <div className="space-y-2">
       <EncabezadoSection />
+      <CotizacionSection onMonedaChange={onMonedaChange} />
       <DescripcionGeneralSection />
       <CaracteristicasSection />
       <ResumenMontosSection />
@@ -34,6 +41,45 @@ export function CaratulaForm() {
       {/* Las autorizaciones se movieron al final de la solapa "Anexos Activos"
           para que queden como última página del PDF impreso. */}
     </div>
+  );
+}
+
+// ─── Cotización USD (sólo en el form, el PDF la sigue mostrando dentro del Resumen) ──
+function CotizacionSection({
+  onMonedaChange,
+}: {
+  onMonedaChange: (next: 'pesos' | 'usd') => void;
+}) {
+  const { control } = useFormContext<Proyecto>();
+  return (
+    <Card>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="cotizacionUsd"
+            className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted"
+          >
+            Cotización USD (pesos por dólar)
+          </label>
+          <div className="w-[220px]">
+            <MoneyInput
+              control={control}
+              name="caratula.cotizacionUsd"
+              placeholder="0,00"
+              suffix="$/USD"
+              id="cotizacionUsd"
+              fixedCurrency="pesos"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+            Moneda de entrada:
+          </span>
+          <MonedaToggle onRequestModeChange={onMonedaChange} />
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -80,6 +126,9 @@ function DescripcionGeneralSection() {
         <hr className="my-3 border-border" />
 
         <Field label="Descripción" bold labelWidth="220px">
+          <div className="mb-1.5 text-[11px] italic text-ink-muted">
+            Añadir objetivos y comentarios de los adjuntos en caso de ser necesario.
+          </div>
           <TextAreaWithCount<Proyecto>
             name="caratula.descripcion.descripcion"
             maxLength={DESCRIPCION_MAX}
@@ -99,6 +148,9 @@ function DescripcionGeneralSection() {
         <hr className="my-3 border-border" />
 
         <Field label="Objetivos y justificación" bold labelWidth="220px">
+          <div className="mb-1.5 text-[11px] italic text-ink-muted">
+            Añadir objetivos y justificación y comentarios de los adjuntos en caso de ser necesario.
+          </div>
           <TextAreaWithCount<Proyecto>
             name="caratula.descripcion.objetivos"
             maxLength={DESCRIPCION_MAX}
@@ -175,6 +227,10 @@ function ResumenMontosSection() {
   const { resumen } = useCalculatedTotals();
   const resumenMontos = useWatch({ control, name: 'caratula.resumenMontos' });
   const cotizacion = useWatch({ control, name: 'caratula.cotizacionUsd' });
+  const moneda = useWatch({ control, name: 'caratula.monedaEntrada' });
+  const cotizacionValida =
+    typeof cotizacion === 'number' && cotizacion > 0 && Number.isFinite(cotizacion);
+  const pesosIsActive = !(moneda === 'usd' && cotizacionValida);
 
   const filas = [
     {
@@ -207,35 +263,52 @@ function ResumenMontosSection() {
     'border border-border bg-accent/5 px-2 py-1.5 text-right font-mono text-[11px] font-semibold text-accent';
   const usdTotalCellClass =
     'border border-border bg-total px-2 py-1.5 text-right font-mono text-[11px] font-bold text-accent';
+  const readOnlyPesosClass =
+    'px-2 py-1.5 text-right font-mono text-[11px] tabular-nums text-ink-muted bg-section/50 cursor-not-allowed';
+  const readOnlyUsdClass =
+    'px-2 py-1.5 text-right font-mono text-[11px] tabular-nums text-accent bg-accent/5 cursor-not-allowed';
+
+  /** Celda editable/read-only según el modo activo. */
+  const pesosCell = (path: string, fld: 'ejActual' | 'ejSiguientes' | 'previsto', stored: number | undefined) => (
+    <td className="border border-border p-0">
+      {pesosIsActive ? (
+        <MoneyInput
+          control={control}
+          name={`${path}.${fld}` as FieldPath<Proyecto>}
+          fixedCurrency="pesos"
+          inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
+        />
+      ) : (
+        <div className={readOnlyPesosClass} title="Tabla autocalculada — cambiá la moneda para editar">
+          {formatMoneyZero(stored)}
+        </div>
+      )}
+    </td>
+  );
+  const usdCellEditable = (path: string, fld: 'ejActual' | 'ejSiguientes' | 'previsto', stored: number | undefined) => (
+    <td className="border border-border p-0">
+      {!pesosIsActive ? (
+        <MoneyInput
+          control={control}
+          name={`${path}.${fld}` as FieldPath<Proyecto>}
+          inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
+        />
+      ) : (
+        <div className={readOnlyUsdClass} title="Tabla autocalculada — cambiá la moneda para editar">
+          {formatUsdFromMiles(stored, cotizacion)}
+        </div>
+      )}
+    </td>
+  );
 
   return (
     <>
       <SectionTitle variant="sub">Resumen de Montos Involucrados en el Proyecto</SectionTitle>
 
-      <div className="mb-3 flex flex-wrap items-end gap-3 rounded-sm border border-border bg-white px-3.5 py-2.5">
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="cotizacionUsd"
-            className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted"
-          >
-            Cotización USD (pesos por dólar)
-          </label>
-          <div className="w-[220px]">
-            <MoneyInput
-              control={control}
-              name="caratula.cotizacionUsd"
-              placeholder="0,00"
-              suffix="$/USD"
-              id="cotizacionUsd"
-            />
-          </div>
-        </div>
-      </div>
-
       <div className="mb-3 rounded-sm border border-l-4 border-border border-l-accent2 bg-white px-3.5 py-2.5 text-[12px] text-ink-muted">
-        Los importes se expresan en miles de pesos (m$). Las cifras corresponden a
-        valores incrementales respecto a los que se registran antes de la ejecución
-        del proyecto.
+        Los importes se expresan en millones de pesos. Las cifras corresponden
+        a valores incrementales respecto a los que se registran antes de la
+        ejecución del proyecto.
       </div>
 
       <div className="overflow-x-auto rounded-sm border border-border bg-white">
@@ -246,16 +319,16 @@ function ResumenMontosSection() {
                 Concepto <span className="font-normal text-white/70">(pesos)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicio actual (m$)
+                Ejercicio actual (pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicios siguientes (m$)
+                Ejercicios siguientes (pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Total (m$)
+                Total (pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Previsto en Presupuesto (m$)
+                Previsto en Presupuesto (pesos)
               </th>
             </tr>
           </thead>
@@ -265,30 +338,12 @@ function ResumenMontosSection() {
                 <td className="border border-border bg-section px-2 py-1 text-[11px] font-medium">
                   {f.label}
                 </td>
-                <td className="border border-border p-0">
-                  <MoneyInput
-                    control={control}
-                    name={`${f.path}.ejActual` as const}
-                    inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                  />
-                </td>
-                <td className="border border-border p-0">
-                  <MoneyInput
-                    control={control}
-                    name={`${f.path}.ejSiguientes` as const}
-                    inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                  />
-                </td>
+                {pesosCell(f.path, 'ejActual', f.data?.ejActual)}
+                {pesosCell(f.path, 'ejSiguientes', f.data?.ejSiguientes)}
                 <td className="border border-border p-0">
                   <CalculatedField value={f.total} className="rounded-none border-0 bg-accent/5" />
                 </td>
-                <td className="border border-border p-0">
-                  <MoneyInput
-                    control={control}
-                    name={`${f.path}.previsto` as const}
-                    inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                  />
-                </td>
+                {pesosCell(f.path, 'previsto', f.data?.previsto)}
               </tr>
             ))}
 
@@ -332,39 +387,33 @@ function ResumenMontosSection() {
               <td className="border border-border bg-section px-2 py-1 text-[11px] font-medium">
                 Gastos incrementales corrientes que ocasionará el proyecto
               </td>
-              <td className="border border-border p-0">
-                <MoneyInput
-                  control={control}
-                  name="caratula.resumenMontos.gastosIncrementales.ejActual"
-                  inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                />
-              </td>
-              <td className="border border-border p-0">
-                <MoneyInput
-                  control={control}
-                  name="caratula.resumenMontos.gastosIncrementales.ejSiguientes"
-                  inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                />
-              </td>
+              {pesosCell(
+                'caratula.resumenMontos.gastosIncrementales',
+                'ejActual',
+                resumenMontos?.gastosIncrementales?.ejActual
+              )}
+              {pesosCell(
+                'caratula.resumenMontos.gastosIncrementales',
+                'ejSiguientes',
+                resumenMontos?.gastosIncrementales?.ejSiguientes
+              )}
               <td className="border border-border p-0">
                 <CalculatedField
                   value={resumen.gastosIncrementalesTotal}
                   className="rounded-none border-0 bg-accent/5"
                 />
               </td>
-              <td className="border border-border p-0">
-                <MoneyInput
-                  control={control}
-                  name="caratula.resumenMontos.gastosIncrementales.previsto"
-                  inputClassName="border-0 focus:ring-0 rounded-none text-[11px]"
-                />
-              </td>
+              {pesosCell(
+                'caratula.resumenMontos.gastosIncrementales',
+                'previsto',
+                resumenMontos?.gastosIncrementales?.previsto
+              )}
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* ─── Tabla espejo en USD (todos los valores calculados) ───────────── */}
+      {/* ─── Tabla USD (editable en modo USD, mirror en modo pesos) ────────── */}
       <div className="mt-3 mb-1 text-[11px] italic text-ink-muted">
         Equivalente en USD — calculado automáticamente según la cotización
         ingresada arriba. Si la cotización es 0 o está vacía, los valores
@@ -397,18 +446,12 @@ function ResumenMontosSection() {
                 <td className="border border-border bg-section px-2 py-1 text-[11px] font-medium">
                   {f.label}
                 </td>
-                <td className={usdCellClass}>
-                  {formatUsdFromMiles(f.data?.ejActual, cotizacion)}
-                </td>
-                <td className={usdCellClass}>
-                  {formatUsdFromMiles(f.data?.ejSiguientes, cotizacion)}
-                </td>
+                {usdCellEditable(f.path, 'ejActual', f.data?.ejActual)}
+                {usdCellEditable(f.path, 'ejSiguientes', f.data?.ejSiguientes)}
                 <td className={usdCellClass}>
                   {formatUsdFromMiles(f.total, cotizacion)}
                 </td>
-                <td className={usdCellClass}>
-                  {formatUsdFromMiles(f.data?.previsto, cotizacion)}
-                </td>
+                {usdCellEditable(f.path, 'previsto', f.data?.previsto)}
               </tr>
             ))}
 
@@ -436,27 +479,24 @@ function ResumenMontosSection() {
               <td className="border border-border bg-section px-2 py-1 text-[11px] font-medium">
                 Gastos incrementales corrientes que ocasionará el proyecto
               </td>
-              <td className={usdCellClass}>
-                {formatUsdFromMiles(
-                  resumenMontos?.gastosIncrementales?.ejActual,
-                  cotizacion
-                )}
-              </td>
-              <td className={usdCellClass}>
-                {formatUsdFromMiles(
-                  resumenMontos?.gastosIncrementales?.ejSiguientes,
-                  cotizacion
-                )}
-              </td>
+              {usdCellEditable(
+                'caratula.resumenMontos.gastosIncrementales',
+                'ejActual',
+                resumenMontos?.gastosIncrementales?.ejActual
+              )}
+              {usdCellEditable(
+                'caratula.resumenMontos.gastosIncrementales',
+                'ejSiguientes',
+                resumenMontos?.gastosIncrementales?.ejSiguientes
+              )}
               <td className={usdCellClass}>
                 {formatUsdFromMiles(resumen.gastosIncrementalesTotal, cotizacion)}
               </td>
-              <td className={usdCellClass}>
-                {formatUsdFromMiles(
-                  resumenMontos?.gastosIncrementales?.previsto,
-                  cotizacion
-                )}
-              </td>
+              {usdCellEditable(
+                'caratula.resumenMontos.gastosIncrementales',
+                'previsto',
+                resumenMontos?.gastosIncrementales?.previsto
+              )}
             </tr>
           </tbody>
         </table>
@@ -473,7 +513,7 @@ function DetalleInversionSection() {
 
   return (
     <>
-      <SectionTitle variant="sub">Detalle del Monto Total a Invertir (en miles de $)</SectionTitle>
+      <SectionTitle variant="sub">Detalle del Monto Total a Invertir (en millones de pesos)</SectionTitle>
       <div className="grid gap-4 md:grid-cols-2">
         {/* Activable + No activable */}
         <div className="rounded-sm border border-border bg-white p-3.5">
@@ -616,7 +656,7 @@ function EvaluacionEconomicaSection() {
           <Field label="Tasa de corte %" orientation="column">
             <Input type="number" step="0.01" {...numberRegister('caratula.evaluacion.tasaCorte')} />
           </Field>
-          <Field label="Valor Actual Neto (VAN, en m$)" orientation="column">
+          <Field label="Valor Actual Neto (VAN, en millones de pesos)" orientation="column">
             <Input type="number" step="0.01" {...numberRegister('caratula.evaluacion.van')} />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
@@ -634,6 +674,9 @@ function OpinionesSection() {
   return (
     <>
       <SectionTitle variant="sub">Opiniones y Comentarios</SectionTitle>
+      <div className="mb-3 rounded-sm border border-l-4 border-border border-l-accent2 bg-white px-3.5 py-2.5 text-[12px] text-ink-muted">
+        Dejar en blanco — se llena a mano en el resumen ejecutivo.
+      </div>
       <Card>
         <Field label="Planeamiento Estratégico y Control de Gestión" labelWidth="280px">
           <TextArea rows={3} {...register('caratula.opiniones.planeamiento')} />
@@ -703,12 +746,14 @@ function TotalRow({
     );
   }
 
-  const usdClass = `rounded-sm border border-accent/20 bg-accent/5 px-2 py-1.5 text-right font-mono text-accent ${
-    isStrong ? 'bg-accent/10 text-[13px] font-bold' : 'text-[12px] font-semibold'
+  const usdClass = `rounded-sm border border-accent/20 bg-white px-2 py-1.5 text-right font-mono text-accent ${
+    isStrong ? 'text-[13px] font-bold' : 'text-[12px] font-semibold'
   }`;
 
   return (
-    <div className={`border-t border-border pt-1.5 ${className}`}>
+    <div
+      className={`my-1.5 rounded-sm border-l-[3px] border-l-accent bg-accent/10 py-1.5 pl-2 pr-1 ${className}`}
+    >
       <div className="grid grid-cols-[1fr_170px] items-center gap-3">
         <span className={`text-[12px] ${weight}`}>
           {label} <span className="font-normal text-ink-muted">(pesos)</span>

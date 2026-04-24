@@ -1,15 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import { AnexosActivosForm } from './components/forms/AnexosActivosForm';
 import { CaratulaForm } from './components/forms/CaratulaForm';
 import { DetalleMensualForm } from './components/forms/DetalleMensualForm';
 import { PdfPreview } from './components/PdfPreview';
-import { SaveIndicator, Tabs } from './components/ui';
+import { SaveIndicator, SectionNav } from './components/ui';
 import {
   AttachmentsProvider,
   useAttachments,
   type AttachmentsApi,
 } from './hooks/useAttachments';
+import { useActiveSection } from './hooks/useActiveSection';
 import {
   loadProyectoFromStorage,
   useProyectoPersist,
@@ -21,7 +22,27 @@ import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator'
 
 type PdfState = { generating: false } | { generating: true; values: Proyecto };
 
-type TabKey = 'caratula' | 'detalle' | 'anexos';
+/**
+ * Secciones del formulario. El `id` se usa como anchor para scroll y como
+ * hash de URL (sin el prefijo `section-`).
+ */
+const SECTIONS = [
+  { id: 'section-caratula', hash: 'caratula', label: '① Carátula' },
+  { id: 'section-detalle', hash: 'detalle', label: '② Detalle Mensual' },
+  { id: 'section-anexos', hash: 'anexos', label: '③ Anexos Activos' },
+] as const;
+
+const SECTION_IDS = SECTIONS.map((s) => s.id);
+
+function scrollToSection(id: string, updateHash = true) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (updateHash) {
+    const hash = SECTIONS.find((s) => s.id === id)?.hash;
+    if (hash) history.replaceState(null, '', `#${hash}`);
+  }
+}
 
 export default function App() {
   return (
@@ -37,9 +58,22 @@ function AppInner() {
   const persist = useProyectoPersist(methods);
   const attachments = useAttachments();
 
-  const [tab, setTab] = useState<TabKey>('caratula');
+  const active = useActiveSection(SECTION_IDS);
   const pdfRootRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PdfState>({ generating: false });
+
+  // Al montar: si la URL trae hash (#detalle, #anexos…), scrollear ahí sin
+  // animación para no marear con el load inicial.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const target = SECTIONS.find((s) => s.hash === hash);
+    if (!target) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(target.id);
+      el?.scrollIntoView({ behavior: 'auto', block: 'start' });
+    });
+  }, []);
 
   const handleReset = () => {
     const ok = window.confirm(
@@ -49,7 +83,23 @@ function AppInner() {
     methods.reset(crearProyectoVacio());
     persist.clearStorage();
     attachments.clearAll();
-    setTab('caratula');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    history.replaceState(null, '', '#caratula');
+  };
+
+  const handleModedaChange = (next: 'pesos' | 'usd') => {
+    const ok = window.confirm(
+      `¿Cambiar la moneda a ${next.toUpperCase()}?\n\nSe va a borrar TODO lo cargado y el formulario arrancará desde cero en la nueva moneda.`
+    );
+    if (!ok) return;
+    const fresh = crearProyectoVacio();
+    // aplicamos el nuevo modo al proyecto limpio antes del reset
+    if (fresh.caratula) fresh.caratula.monedaEntrada = next;
+    methods.reset(fresh);
+    persist.clearStorage();
+    attachments.clearAll();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    history.replaceState(null, '', '#caratula');
   };
 
   const handleGeneratePdf = async () => {
@@ -81,38 +131,45 @@ function AppInner() {
   return (
     <FormProvider {...methods}>
       <div className="min-h-screen bg-bg font-sans text-ink">
-        <Topbar
-          persist={persist}
-          generating={pdf.generating}
-          onReset={handleReset}
-          onGeneratePdf={handleGeneratePdf}
-        />
+        {/* Topbar + nav de secciones en el mismo contenedor sticky */}
+        <div className="no-print sticky top-0 z-50 shadow-topbar">
+          <Topbar
+            persist={persist}
+            generating={pdf.generating}
+            onReset={handleReset}
+            onGeneratePdf={handleGeneratePdf}
+          />
+          <div className="border-b-2 border-border-strong bg-section">
+            <SectionNav
+              sections={SECTIONS.map((s) => ({ id: s.id, label: s.label }))}
+              active={active}
+              onNavigate={(id) => scrollToSection(id)}
+            />
+          </div>
+        </div>
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as TabKey)}
-          className="no-print"
-        >
-          <Tabs.List>
-            <Tabs.Trigger value="caratula">① Carátula</Tabs.Trigger>
-            <Tabs.Trigger value="detalle">② Detalle Mensual</Tabs.Trigger>
-            <Tabs.Trigger value="anexos">③ Anexos Activos</Tabs.Trigger>
-          </Tabs.List>
-
-          <main className="mx-auto max-w-[1100px] px-6 py-6">
-            <form onSubmit={(e) => e.preventDefault()} noValidate>
-              <Tabs.Panel value="caratula">
-                <CaratulaForm />
-              </Tabs.Panel>
-              <Tabs.Panel value="detalle">
-                <DetalleMensualForm />
-              </Tabs.Panel>
-              <Tabs.Panel value="anexos">
-                <AnexosActivosForm />
-              </Tabs.Panel>
-            </form>
-          </main>
-        </Tabs>
+        <main className="mx-auto max-w-[1100px] px-6 py-6">
+          <form onSubmit={(e) => e.preventDefault()} noValidate>
+            {SECTIONS.map((s, i) => (
+              <section
+                key={s.id}
+                id={s.id}
+                className={`scroll-mt-[110px] ${
+                  i > 0 ? 'mt-10 border-t-2 border-border pt-6' : ''
+                }`}
+              >
+                <h1 className="mb-4 text-[18px] font-bold uppercase tracking-wide text-accent">
+                  {s.label}
+                </h1>
+                {s.hash === 'caratula' && (
+                  <CaratulaForm onMonedaChange={handleModedaChange} />
+                )}
+                {s.hash === 'detalle' && <DetalleMensualForm />}
+                {s.hash === 'anexos' && <AnexosActivosForm />}
+              </section>
+            ))}
+          </form>
+        </main>
 
         {/* PdfPreview off-screen: se monta solo durante la generación. */}
         {pdf.generating && (
@@ -146,7 +203,7 @@ function Topbar({
   onGeneratePdf: () => void;
 }) {
   return (
-    <header className="no-print sticky top-0 z-50 flex items-center justify-between gap-4 bg-accent px-6 py-3 text-white shadow-topbar">
+    <header className="flex items-center justify-between gap-4 bg-accent px-6 py-3 text-white">
       <div className="flex min-w-0 flex-col">
         <span className="font-mono text-[11px] tracking-wider opacity-70">
           AD-OO-0136/01-05 · Ene. 22

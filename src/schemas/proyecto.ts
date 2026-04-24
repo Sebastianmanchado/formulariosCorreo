@@ -168,6 +168,12 @@ export const caratulaSchema = z.object({
   resumenMontos: resumenMontosSchema.default({}),
   /** Cotización de referencia del dólar (pesos por USD). */
   cotizacionUsd: moneyField,
+  /**
+   * Moneda en la que el usuario está cargando los valores. Los montos
+   * siempre se persisten en m$; en modo "usd" los inputs convierten a m$ al
+   * guardar y muestran el equivalente USD al usuario.
+   */
+  monedaEntrada: z.enum(['pesos', 'usd']).optional().default('pesos'),
   detalleInversion: detalleInversionSchema.default({}),
   infoTI: infoTISchema.default({}),
   evaluacion: evaluacionSchema.default({}),
@@ -205,7 +211,6 @@ const filaDetalleSchema = z.object({
 });
 
 export const detalleMensualSchema = z.object({
-  proyecto: textField,     // se pre-carga de caratula.descripcion.denominacion
   inversion: z.object({
     tecnologia: z.object({
       hardware: filaDetalleSchema.default({}),
@@ -256,7 +261,6 @@ const subSeccionAnexoSchema = z.object({
 });
 
 export const anexosActivosSchema = z.object({
-  proyecto: textField,
   hardware: subSeccionAnexoSchema.default({}),
   software: subSeccionAnexoSchema.default({}),
   desarrollosExternos: subSeccionAnexoSchema.default({}),

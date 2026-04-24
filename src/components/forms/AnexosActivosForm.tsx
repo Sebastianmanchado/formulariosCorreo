@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import {
   useFieldArray,
   useFormContext,
+  useWatch,
   type FieldPath,
 } from 'react-hook-form';
 import {
@@ -18,40 +19,41 @@ import {
   type Proyecto,
 } from '../../schemas/proyecto';
 import { AUTORIZACIONES } from '../../data/constants';
-import { formatMoneyZero } from '../../utils/formatters';
-import { Input, MoneyInput, SectionTitle, SignatureBox } from '../ui';
+import { formatMoneyZero, formatUsdFromMiles } from '../../utils/formatters';
+import { MoneyInput, SectionTitle, SignatureBox } from '../ui';
 
 /** Total columnas: 1 concepto + 1 cant + 1 ctoUnit + 1 costoTotal + 12 meses + 1 totalAnual + 2 año extra + 1 acciones = 20 */
 const COLSPAN = 20;
 
 export function AnexosActivosForm() {
-  const { register, getValues, setValue } = useFormContext<Proyecto>();
+  const { control } = useFormContext<Proyecto>();
   const totales = useAnexosTotales();
 
-  // Pre-cargar Proyecto desde Carátula solo al montar y si está vacío.
-  useEffect(() => {
-    const current = getValues('anexosActivos.proyecto');
-    const denom = getValues('caratula.descripcion.denominacion');
-    if (!current && denom) {
-      setValue('anexosActivos.proyecto', denom);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Nombre del proyecto heredado de la Carátula — read-only.
+  const denominacion = useWatch({
+    control,
+    name: 'caratula.descripcion.denominacion',
+  });
+  // Cotización USD de la Carátula, para los totales en USD.
+  const cotizacion = useWatch({ control, name: 'caratula.cotizacionUsd' });
 
   return (
     <div className="space-y-2">
-      <div className="mb-4 flex flex-wrap items-end gap-4">
-        <div className="min-w-[300px] flex-1">
-          <label className="mb-1 block text-[13px] font-semibold text-ink">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-[280px] flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
             Proyecto
-          </label>
-          <Input
-            {...register('anexosActivos.proyecto')}
-            placeholder="Denominación del proyecto"
-          />
+          </div>
+          <div className="text-[14px] font-semibold text-accent">
+            {denominacion?.trim() || (
+              <span className="font-normal italic text-ink-muted">
+                Sin denominar — cargá el nombre en la Carátula.
+              </span>
+            )}
+          </div>
         </div>
-        <div className="pb-2 text-[11px] italic text-ink-muted">
-          Importes en miles de pesos (m$)
+        <div className="pb-1 text-[11px] italic text-ink-muted">
+          Importes en millones de pesos
         </div>
       </div>
 
@@ -62,26 +64,31 @@ export function AnexosActivosForm() {
         title="a1.1 — Detalle de Hardware"
         sectionKey="hardware"
         totals={totales.sections.hardware}
+        cotizacion={cotizacion}
       />
       <SubseccionTable
         title="a1.2 — Detalle de Software / Licencias"
         sectionKey="software"
         totals={totales.sections.software}
+        cotizacion={cotizacion}
       />
       <SubseccionTable
         title="a1.3 — Desarrollos Externos"
         sectionKey="desarrollosExternos"
         totals={totales.sections.desarrollosExternos}
+        cotizacion={cotizacion}
       />
       <SubseccionTable
         title="a1.4 — Otros Egresos Tecnológicos"
         sectionKey="otrosTecnologicos"
         totals={totales.sections.otrosTecnologicos}
+        cotizacion={cotizacion}
       />
 
       <TotalAgregadoBox
         label="TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)"
         col={totales.totalTecnologicos}
+        cotizacion={cotizacion}
       />
 
       {/* a2 */}
@@ -90,6 +97,7 @@ export function AnexosActivosForm() {
         title="a2 — Detalle de Bienes de Uso"
         sectionKey="bienesUso"
         totals={totales.sections.bienesUso}
+        cotizacion={cotizacion}
       />
 
       {/* a3 */}
@@ -98,6 +106,7 @@ export function AnexosActivosForm() {
         title="a3 — Detalle de Obras (no mantenimiento)"
         sectionKey="obras"
         totals={totales.sections.obras}
+        cotizacion={cotizacion}
       />
 
       {/* Autorizaciones al final — se imprimen como última página del PDF. */}
@@ -120,10 +129,12 @@ function SubseccionTable({
   title,
   sectionKey,
   totals,
+  cotizacion,
 }: {
   title: string;
   sectionKey: AnexoSectionKey;
   totals: AnexoSectionTotals;
+  cotizacion: number | null | undefined;
 }) {
   const { register, control } = useFormContext<Proyecto>();
   const basePath = `anexosActivos.${sectionKey}.filas` as const;
@@ -179,8 +190,8 @@ function SubseccionTable({
                 Concepto
               </Th>
               <Th>Cant.</Th>
-              <Th>Cto. unit. (m$)</Th>
-              <Th highlight>Costo Total (m$)</Th>
+              <Th>Cto. unit. (pesos)</Th>
+              <Th highlight>Costo Total (pesos)</Th>
               {MESES_KEYS.map((m) => (
                 <Th key={m}>{MESES_LABELS[m]}</Th>
               ))}
@@ -303,7 +314,9 @@ function SubseccionTable({
             })}
 
             {/* Total row */}
-            {fields.length > 0 && <TotalRow col={totals.colTotals} />}
+            {fields.length > 0 && (
+              <TotalRow col={totals.colTotals} cotizacion={cotizacion} />
+            )}
           </tbody>
         </table>
       </div>
@@ -344,38 +357,58 @@ function Th({
   );
 }
 
-function TotalRow({ col }: { col: AnexoColTotals }) {
+function TotalRow({
+  col,
+  cotizacion,
+}: {
+  col: AnexoColTotals;
+  cotizacion: number | null | undefined;
+}) {
+  const pesosCell =
+    'border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+  const usdCell =
+    'border-r border-accent/20 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
   return (
-    <tr>
-      <td className="sticky left-0 z-10 border-t-2 border-r-2 border-border-strong bg-total p-0">
-        <div className="px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
-          Total
-        </div>
-      </td>
-      <td className="border-t-2 border-border-strong bg-total" />
-      <td className="border-t-2 border-border-strong bg-total" />
-      <td className="border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-        {formatMoneyZero(col.costoTotal)}
-      </td>
-      {MESES_KEYS.map((m) => (
-        <td
-          key={m}
-          className="border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent"
-        >
-          {formatMoneyZero(col.meses[m])}
+    <>
+      <tr>
+        <td className="sticky left-0 z-10 border-t-2 border-r-2 border-border-strong bg-total p-0">
+          <div className="px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
+            Total <span className="font-normal text-ink-muted">(pesos)</span>
+          </div>
         </td>
-      ))}
-      <td className="border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-        {formatMoneyZero(col.totalAnual)}
-      </td>
-      <td className="border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-        {formatMoneyZero(col.anioMas1)}
-      </td>
-      <td className="border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-        {formatMoneyZero(col.anioMas2)}
-      </td>
-      <td className="border-t-2 border-border-strong bg-total" />
-    </tr>
+        <td className="border-t-2 border-border-strong bg-total" />
+        <td className="border-t-2 border-border-strong bg-total" />
+        <td className={pesosCell}>{formatMoneyZero(col.costoTotal)}</td>
+        {MESES_KEYS.map((m) => (
+          <td key={m} className={pesosCell}>
+            {formatMoneyZero(col.meses[m])}
+          </td>
+        ))}
+        <td className={pesosCell}>{formatMoneyZero(col.totalAnual)}</td>
+        <td className={pesosCell}>{formatMoneyZero(col.anioMas1)}</td>
+        <td className={pesosCell}>{formatMoneyZero(col.anioMas2)}</td>
+        <td className="border-t-2 border-border-strong bg-total" />
+      </tr>
+      <tr>
+        <td className="sticky left-0 z-10 border-r-2 border-border-strong bg-accent/10 p-0">
+          <div className="px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
+            Total <span className="font-normal text-ink-muted">(USD)</span>
+          </div>
+        </td>
+        <td className="bg-accent/10" />
+        <td className="bg-accent/10" />
+        <td className={usdCell}>{formatUsdFromMiles(col.costoTotal, cotizacion)}</td>
+        {MESES_KEYS.map((m) => (
+          <td key={m} className={usdCell}>
+            {formatUsdFromMiles(col.meses[m], cotizacion)}
+          </td>
+        ))}
+        <td className={usdCell}>{formatUsdFromMiles(col.totalAnual, cotizacion)}</td>
+        <td className={usdCell}>{formatUsdFromMiles(col.anioMas1, cotizacion)}</td>
+        <td className={usdCell}>{formatUsdFromMiles(col.anioMas2, cotizacion)}</td>
+        <td className="bg-accent/10" />
+      </tr>
+    </>
   );
 }
 
@@ -384,12 +417,18 @@ function TotalRow({ col }: { col: AnexoColTotals }) {
 function TotalAgregadoBox({
   label,
   col,
+  cotizacion,
 }: {
   label: string;
   col: AnexoColTotals;
+  cotizacion: number | null | undefined;
 }) {
+  const cellBase =
+    'border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+  const cellBaseUsd =
+    'border-r border-accent/30 bg-accent/20 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
   return (
-    <div className="mb-5 overflow-x-auto rounded-sm border-2 border-accent bg-accent/5">
+    <div className="mb-5 overflow-x-auto rounded-sm border-2 border-accent">
       <div className="bg-accent px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-white">
         {label}
       </div>
@@ -413,31 +452,45 @@ function TotalAgregadoBox({
         <tbody>
           <tr>
             <td className="border-r border-accent/30 bg-accent/10 px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
-              Total
+              Total <span className="font-normal text-ink-muted">(pesos)</span>
             </td>
             <td className="bg-accent/10" />
             <td className="bg-accent/10" />
-            <td className="border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[11px] font-bold text-accent">
-              {formatMoneyZero(col.costoTotal)}
-            </td>
+            <td className={cellBase}>{formatMoneyZero(col.costoTotal)}</td>
             {MESES_KEYS.map((m) => (
-              <td
-                key={m}
-                className="border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent"
-              >
+              <td key={m} className={cellBase}>
                 {formatMoneyZero(col.meses[m])}
               </td>
             ))}
-            <td className="border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[11px] font-bold text-accent">
-              {formatMoneyZero(col.totalAnual)}
-            </td>
-            <td className="border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-              {formatMoneyZero(col.anioMas1)}
-            </td>
-            <td className="border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent">
-              {formatMoneyZero(col.anioMas2)}
-            </td>
+            <td className={cellBase}>{formatMoneyZero(col.totalAnual)}</td>
+            <td className={cellBase}>{formatMoneyZero(col.anioMas1)}</td>
+            <td className={cellBase}>{formatMoneyZero(col.anioMas2)}</td>
             <td className="bg-accent/10" />
+          </tr>
+          <tr>
+            <td className="border-r border-accent/30 bg-accent/20 px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
+              Total <span className="font-normal text-ink-muted">(USD)</span>
+            </td>
+            <td className="bg-accent/20" />
+            <td className="bg-accent/20" />
+            <td className={cellBaseUsd}>
+              {formatUsdFromMiles(col.costoTotal, cotizacion)}
+            </td>
+            {MESES_KEYS.map((m) => (
+              <td key={m} className={cellBaseUsd}>
+                {formatUsdFromMiles(col.meses[m], cotizacion)}
+              </td>
+            ))}
+            <td className={cellBaseUsd}>
+              {formatUsdFromMiles(col.totalAnual, cotizacion)}
+            </td>
+            <td className={cellBaseUsd}>
+              {formatUsdFromMiles(col.anioMas1, cotizacion)}
+            </td>
+            <td className={cellBaseUsd}>
+              {formatUsdFromMiles(col.anioMas2, cotizacion)}
+            </td>
+            <td className="bg-accent/20" />
           </tr>
         </tbody>
       </table>

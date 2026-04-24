@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { useFormContext, type FieldPath } from 'react-hook-form';
+import { useRef, type ReactNode } from 'react';
+import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import {
   useDetalleTotales,
   type PerColumn,
@@ -11,40 +11,37 @@ import {
   type Proyecto,
 } from '../../schemas/proyecto';
 import { formatMoneyZero } from '../../utils/formatters';
-import { Input, MoneyInput, SectionTitle } from '../ui';
+import { MoneyInput, SectionTitle } from '../ui';
 
 export function DetalleMensualForm() {
-  const { register, getValues, setValue } = useFormContext<Proyecto>();
+  const { control } = useFormContext<Proyecto>();
   const totales = useDetalleTotales();
   const tableRef = useRef<HTMLDivElement>(null);
   useGridNavigation(tableRef);
 
-  // Pre-cargar "Proyecto" desde caratula.descripcion.denominacion solo una vez
-  // al montar y solo si el campo está vacío — no queremos pisar ediciones
-  // manuales posteriores si el usuario cambia la denominación en Carátula.
-  useEffect(() => {
-    const current = getValues('detalleMensual.proyecto');
-    const denom = getValues('caratula.descripcion.denominacion');
-    if (!current && denom) {
-      setValue('detalleMensual.proyecto', denom);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Nombre del proyecto heredado de la Carátula — se muestra read-only.
+  const denominacion = useWatch({
+    control,
+    name: 'caratula.descripcion.denominacion',
+  });
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-end gap-4">
-        <div className="min-w-[300px] flex-1">
-          <label className="mb-1 block text-[13px] font-semibold text-ink">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-[280px] flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
             Proyecto
-          </label>
-          <Input
-            {...register('detalleMensual.proyecto')}
-            placeholder="Denominación del proyecto"
-          />
+          </div>
+          <div className="text-[14px] font-semibold text-accent">
+            {denominacion?.trim() || (
+              <span className="font-normal italic text-ink-muted">
+                Sin denominar — cargá el nombre en la Carátula.
+              </span>
+            )}
+          </div>
         </div>
-        <div className="pb-2 text-[11px] italic text-ink-muted">
-          Importes en miles de pesos (m$)
+        <div className="pb-1 text-[11px] italic text-ink-muted">
+          Importes en millones de pesos
         </div>
       </div>
 
@@ -193,38 +190,34 @@ export function DetalleMensualForm() {
               emphasis="strong"
             />
 
+            {/* Separador visual entre a) y b) */}
+            <SpacerRow />
+
             {/* ═══ b) Impacto Económico ═══ */}
             <SectionRow label="b) Impacto Económico de la Inversión" />
 
-            <SubSectionRow label="b.1) Ingresos Incrementales (Venta)" />
             <DataRow
-              labelEditable
-              labelPlaceholder="Detallar"
+              number="b.1"
+              label="Ingresos Incrementales (Venta)"
               basePath="detalleMensual.impacto.ingresosIncrementales"
               rowTotal={totales.rowTotals.ingresosIncrementales}
               gridRow={13}
             />
-
-            <SubSectionRow label="b.2) Ahorro en Gastos Corrientes que ocasionará el proyecto" />
             <DataRow
-              labelEditable
-              labelPlaceholder="Detallar"
+              number="b.2"
+              label="Ahorro en Gastos Corrientes que ocasionará el proyecto"
               basePath="detalleMensual.impacto.ahorroGastos"
               rowTotal={totales.rowTotals.ahorroGastos}
               gridRow={14}
             />
-
             <MirrorRow label="b.3) Inversión no activable (= a.2)" per={totales.b3} />
-
-            <SubSectionRow label="b.4) Gastos Corrientes que ocasionará el proyecto" />
             <DataRow
-              labelEditable
-              labelPlaceholder="Detallar"
+              number="b.4"
+              label="Gastos Corrientes que ocasionará el proyecto"
               basePath="detalleMensual.impacto.gastosCorrientes"
               rowTotal={totales.rowTotals.gastosCorrientes}
               gridRow={15}
             />
-
             <DataRow
               number="b.5"
               label="Amortización de la inversión activable"
@@ -264,6 +257,18 @@ function Th({
     >
       {children}
     </th>
+  );
+}
+
+function SpacerRow() {
+  return (
+    <tr aria-hidden="true">
+      <td
+        colSpan={14}
+        className="border-0 bg-bg p-0"
+        style={{ height: '14px' }}
+      />
+    </tr>
   );
 }
 

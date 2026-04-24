@@ -1,13 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c ' *)",
-      "Bash(pip install *)",
-      "Bash(npm --version)",
       "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
-      "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(grep -rn \"miles de pesos\\\\|\\(m\\\\$\\)\\\\|m\\\\\\\\\\\\$\" \"C:/Users/sebas/OneDrive/Documentos/correoArg/src/\" --include=\"*.tsx\" --include=\"*.ts\")"
     ]
   }
 }
