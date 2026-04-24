@@ -6,7 +6,6 @@ COPY . .
 RUN npm run build
 
 FROM image-registry.openshift-image-registry.svc:5000/openshift/nginx:latest
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+COPY --from=builder /app/dist /opt/app-root/src
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

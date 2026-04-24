@@ -28,7 +28,7 @@ spec:
           imagePullPolicy: Always
           image: 'image-registry.openshift-image-registry.svc:5000/apem-dev/apemformularios:latest'
           ports:
-            - containerPort: 80
+            - containerPort: 8080
               protocol: TCP
           resources:
             requests:
@@ -39,8 +39,8 @@ spec:
               cpu: '200m'
           readinessProbe:
             httpGet:
-              path: /health
-              port: 80
+              path: /
+              port: 8080
               scheme: HTTP
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -49,8 +49,8 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /health
-              port: 80
+              path: /
+              port: 8080
               scheme: HTTP
             initialDelaySeconds: 15
             periodSeconds: 10
