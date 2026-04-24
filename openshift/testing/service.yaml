@@ -1,9 +1,9 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: apemformularios
+  name: apemformularios-test
   labels:
-    app: apemformularios
+    app: apemformularios-test
 spec:
   ipFamilies:
     - IPv4
@@ -17,5 +17,5 @@ spec:
   ipFamilyPolicy: SingleStack
   sessionAffinity: None
   selector:
-    app: apemformularios
-    deployment: apemformularios
+    app: apemformularios-test
+    deployment: apemformularios-test
