@@ -39,24 +39,24 @@ spec:
               cpu: '200m'
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 80
               scheme: HTTP
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 5
+            failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: 80
               scheme: HTTP
-            initialDelaySeconds: 30
+            initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 5
+            failureThreshold: 3
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
