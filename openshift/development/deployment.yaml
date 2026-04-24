@@ -17,14 +17,12 @@ spec:
         deployment: apemformularios
     spec:
       containers:
-        - terminationMessagePath: /dev/termination-log
-          name: apemformularios
+        - name: apemformularios
           env:
             - name: TZ
               value: America/Buenos_Aires
             - name: NODE_ENV
               value: production
-            
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: Always
@@ -44,21 +42,21 @@ spec:
               path: /
               port: 80
               scheme: HTTP
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 3
+            failureThreshold: 5
           livenessProbe:
             httpGet:
               path: /
               port: 80
               scheme: HTTP
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 3
+            failureThreshold: 5
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
@@ -70,4 +68,4 @@ spec:
       maxUnavailable: 25%
       maxSurge: 25%
   revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
+  progressDeadlineSeconds: 900
