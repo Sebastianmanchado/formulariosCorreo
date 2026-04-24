@@ -1,23 +1,23 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: apemformularios-test
+  name: apemformularios
   labels:
-    app: apemformularios-test
+    app: apemformularios
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: apemformularios-test
+      app: apemformularios
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: apemformularios-test
-        deployment: apemformularios-test
+        app: apemformularios
+        deployment: apemformularios
     spec:
       containers:
-        - name: apemformularios-test
+        - name: apemformularios
           env:
             - name: TZ
               value: America/Buenos_Aires

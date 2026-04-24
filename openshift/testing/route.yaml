@@ -1,14 +1,14 @@
 kind: Route
 apiVersion: route.openshift.io/v1
 metadata:
-  name: apemformularios-test
+  name: apemformularios
   labels:
-    app: apemformularios-test
+    app: apemformularios
 spec:
   host: apemformularios-apem-test.apps.ocpbarr.correo.local
   to:
     kind: Service
-    name: apemformularios-test
+    name: apemformularios
     weight: 100
   port:
     targetPort: 8080
