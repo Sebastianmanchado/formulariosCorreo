@@ -32,13 +32,22 @@ export interface GenerateOptions {
 /**
  * Captura cada `<section data-pdf-page>`, arma el PDF base con jsPDF y, si hay
  * adjuntos, los fusiona con `pdf-lib`:
- *   • imágenes PNG/JPG/WebP → cada una como página nueva centrada
- *   • PDFs → se copian todas sus páginas al final del documento
- *   • página separadora con la lista de nombres antes de los adjuntos
+ *   • imágenes PNG/JPG/WebP/HEIC/AVIF → rasterizadas a PNG y embebidas, una
+ *     por página, centradas. Si `embedJpg`/`embedPng` directo falla
+ *     (JPEG progresivo/CMYK, PNG interlazado), caemos a canvas → PNG.
+ *   • PDFs → se copian todas sus páginas al final. PDFs encriptados con
+ *     owner-password se aceptan vía `ignoreEncryption: true`.
+ *   • página separadora con la lista de nombres antes de los adjuntos.
+ *     Sanitizamos los nombres a Win-Ansi para no fallar con caracteres
+ *     unicode (em-dash, smart quotes, emojis, etc.).
  *
- * Si un `AttachmentItem.blob` es undefined (el usuario recargó y perdió el
- * archivo), se ignora ese item (queda el nombre en el listado de la
- * separadora con marca "no disponible").
+ * Robustez:
+ *   • Cada adjunto individual está envuelto en try/catch — un archivo
+ *     problemático no rompe el resto.
+ *   • El separator page también está envuelto — un nombre raro no rompe
+ *     la entrega del PDF base.
+ *   • Si el merge entero con pdf-lib falla (caso muy excepcional), el
+ *     PDF base se descarga igual y se notifica al usuario.
  */
 export async function generateProyectoPdf(
   root: HTMLElement,
@@ -100,38 +109,70 @@ export async function generateProyectoPdf(
   }
 
   // ─── Merge con pdf-lib ────────────────────────────────────────────────────
-  const baseBytes = pdf.output('arraybuffer');
-  const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-  const finalDoc = await PDFDocument.load(baseBytes);
-  const helv = await finalDoc.embedFont(StandardFonts.Helvetica);
-  const helvBold = await finalDoc.embedFont(StandardFonts.HelveticaBold);
+  // Si el merge falla globalmente (ej: pdf-lib explota), guardamos el PDF
+  // base y avisamos al usuario que los adjuntos no se incluyeron.
+  let mergedOk = false;
+  const skipped: string[] = [];
 
-  await drawSeparatorPage(finalDoc, groups, helv, helvBold, rgb);
+  try {
+    const baseBytes = pdf.output('arraybuffer');
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+    const finalDoc = await PDFDocument.load(baseBytes);
+    const helv = await finalDoc.embedFont(StandardFonts.Helvetica);
+    const helvBold = await finalDoc.embedFont(StandardFonts.HelveticaBold);
 
-  for (const group of groups) {
-    for (const item of group.items) {
-      if (!item.blob) continue; // archivo perdido tras recarga
-      const type = item.blob.type || '';
-      try {
-        if (type === 'application/pdf' || /\.pdf$/i.test(item.meta.name)) {
-          await appendPdfPages(finalDoc, item.blob);
-        } else if (type.startsWith('image/')) {
-          await appendImagePage(finalDoc, item.blob, item.meta.name, helv, rgb);
+    // Separator page — wrapped: si falla por algún nombre raro no contemplado,
+    // omitimos el separator pero seguimos con los adjuntos.
+    try {
+      await drawSeparatorPage(finalDoc, groups, helv, helvBold, rgb);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('No se pudo dibujar la página de separador de anexos:', err);
+    }
+
+    for (const group of groups) {
+      for (const item of group.items) {
+        if (!item.blob) continue; // archivo perdido tras recarga
+        try {
+          await appendAttachment(finalDoc, item.blob, item.meta.name, helv, rgb);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('No se pudo incluir el adjunto:', item.meta.name, err);
+          skipped.push(item.meta.name);
         }
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn('No se pudo incluir el adjunto:', item.meta.name, err);
       }
     }
+
+    const finalBytes = await finalDoc.save();
+    const blob = new Blob([new Uint8Array(finalBytes).buffer], {
+      type: 'application/pdf',
+    });
+    downloadBlob(blob, fileName);
+    mergedOk = true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('El merge con pdf-lib falló por completo:', err);
   }
 
-  const finalBytes = await finalDoc.save();
-  // Copia a un Uint8Array plano para que TS acepte el BlobPart bajo lib.dom
-  // más estricta (Uint8Array<ArrayBufferLike> vs Uint8Array<ArrayBuffer>).
-  const blob = new Blob([new Uint8Array(finalBytes).buffer], {
-    type: 'application/pdf',
-  });
-  downloadBlob(blob, fileName);
+  // Fallback: si el merge falló entero, entregamos el PDF base sin adjuntos.
+  if (!mergedOk) {
+    pdf.save(fileName);
+    if (typeof window !== 'undefined') {
+      window.alert(
+        'Se generó el PDF del formulario, pero los archivos adjuntos no pudieron ' +
+          'incluirse. Probá quitando los adjuntos y descargándolos por separado.'
+      );
+    }
+    return;
+  }
+
+  if (skipped.length > 0 && typeof window !== 'undefined') {
+    window.alert(
+      `El PDF se generó, pero los siguientes adjuntos no pudieron incluirse:\n\n` +
+        skipped.map((n) => `• ${n}`).join('\n') +
+        `\n\nProbá descargarlos en formato PDF estándar o como JPG/PNG.`
+    );
+  }
 }
 
 // ─── Helpers pdf-lib ─────────────────────────────────────────────────────────
@@ -174,7 +215,7 @@ async function drawSeparatorPage(
   for (const group of groups) {
     if (group.items.length === 0) continue;
 
-    page.drawText(group.label, {
+    page.drawText(toAnsi(group.label), {
       x: MARGIN_PT,
       y,
       size: 11,
@@ -186,7 +227,7 @@ async function drawSeparatorPage(
     for (const item of group.items) {
       const missing = !item.blob;
       const text = `• ${item.meta.name}${missing ? '  (archivo no disponible)' : ''}`;
-      page.drawText(text, {
+      page.drawText(toAnsi(text), {
         x: MARGIN_PT + 8,
         y,
         size: 10,
@@ -211,10 +252,42 @@ async function drawSeparatorPage(
   );
 }
 
+/**
+ * Anexa un blob al documento final detectando si es PDF o imagen tanto por
+ * MIME como por extensión. PDFs encriptados con owner-password (sin user
+ * password) se aceptan via `ignoreEncryption: true`. Imágenes que fallen el
+ * embed directo caen al fallback canvas → PNG.
+ */
+async function appendAttachment(
+  doc: PDFDocumentT,
+  blob: File,
+  filename: string,
+  font: PDFFontT,
+  rgb: RgbFn
+): Promise<void> {
+  const type = (blob.type || '').toLowerCase();
+  const isPdf = type === 'application/pdf' || /\.pdf$/i.test(filename);
+  if (isPdf) {
+    await appendPdfPages(doc, blob);
+    return;
+  }
+  const looksLikeImage =
+    type.startsWith('image/') ||
+    /\.(png|jpe?g|webp|heic|heif|avif|gif|bmp|tiff?)$/i.test(filename);
+  if (looksLikeImage) {
+    await appendImagePage(doc, blob, filename, font, rgb);
+    return;
+  }
+  throw new Error(`Tipo de archivo no soportado: "${type || filename}".`);
+}
+
 async function appendPdfPages(doc: PDFDocumentT, blob: File): Promise<void> {
   const { PDFDocument } = await import('pdf-lib');
   const bytes = await blob.arrayBuffer();
-  const src = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  // ignoreEncryption:true permite mergear PDFs con owner-password (banco/AFIP/
+  // gobierno) que de otro modo tirarían `EncryptedPDFError`. PDFs con
+  // user-password real siguen fallando — esos no se pueden leer sin la pw.
+  const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const pages = await doc.copyPages(src, src.getPageIndices());
   for (const p of pages) doc.addPage(p);
 }
@@ -226,18 +299,34 @@ async function appendImagePage(
   font: PDFFontT,
   rgb: RgbFn
 ): Promise<void> {
-  const type = blob.type || '';
-  let imgBytes = await blob.arrayBuffer();
-  let embed: Awaited<ReturnType<PDFDocumentT['embedPng']>>;
+  const type = (blob.type || '').toLowerCase();
+  const isJpegByName = /\.jpe?g$/i.test(filename);
+  const isPngByName = /\.png$/i.test(filename);
+  const imgBytes = await blob.arrayBuffer();
+  let embed: Awaited<ReturnType<PDFDocumentT['embedPng']>> | null = null;
 
-  if (type === 'image/png') {
-    embed = await doc.embedPng(imgBytes);
-  } else if (type === 'image/jpeg' || type === 'image/jpg') {
-    embed = await doc.embedJpg(imgBytes);
-  } else {
-    // WebP u otros — convertimos a PNG via canvas.
+  // Intento 1: embed directo según el tipo declarado.
+  try {
+    if (type === 'image/png' || (!type && isPngByName)) {
+      embed = await doc.embedPng(imgBytes);
+    } else if (
+      type === 'image/jpeg' ||
+      type === 'image/jpg' ||
+      (!type && isJpegByName)
+    ) {
+      embed = await doc.embedJpg(imgBytes);
+    }
+  } catch {
+    // pdf-lib no soporta JPEG progresivo, CMYK, PNG interlazado, etc. —
+    // caemos al fallback de rasterizar via canvas.
+    embed = null;
+  }
+
+  // Intento 2 (fallback general): rasterizar via canvas a PNG. Esto cubre
+  // WebP, HEIC, AVIF, JPEG progresivo, PNG interlazado, etc. Cualquier cosa
+  // que el browser pueda dibujar.
+  if (!embed) {
     const pngBytes = await rasterizeToPng(blob);
-    imgBytes = pngBytes;
     embed = await doc.embedPng(pngBytes);
   }
 
@@ -253,13 +342,60 @@ async function appendImagePage(
   const y = yBottom + (maxH - h) / 2;
 
   page.drawImage(embed, { x, y, width: w, height: h });
-  page.drawText(filename, {
+  page.drawText(toAnsi(filename), {
     x: MARGIN_PT,
     y: MARGIN_PT,
     size: 8,
     font,
     color: rgb(0.42, 0.38, 0.35),
   });
+}
+
+/**
+ * Sanitiza un string para que se pueda imprimir con Helvetica (Win-Ansi /
+ * CP1252). Reemplaza los caracteres unicode más comunes por equivalentes
+ * ASCII para no tirar `WinAnsi cannot encode` errors al hacer drawText.
+ *   • Smart quotes → '
+ *   • em-dash / en-dash → -
+ *   • elipsis … → ...
+ *   • bullet • / arrow → mantenidos (existen en Win-Ansi)
+ *   • Caracteres fuera del rango → ?
+ */
+function toAnsi(s: string): string {
+  if (!s) return s;
+  const replacements: Record<string, string> = {
+    '\u2018': "'", // ‘
+    '\u2019': "'", // ’
+    '\u201A': "'",
+    '\u201B': "'",
+    '\u201C': '"', // “
+    '\u201D': '"', // ”
+    '\u201E': '"',
+    '\u2013': '-', // –
+    '\u2014': '-', // —
+    '\u2212': '-', // −
+    '\u2026': '...', // …
+    '\u00A0': ' ', // nbsp → espacio normal
+    '\u200B': '', // zero-width space
+    '\u200C': '',
+    '\u200D': '',
+    '\uFEFF': '',
+  };
+  let out = '';
+  for (const ch of s) {
+    const code = ch.charCodeAt(0);
+    if (replacements[ch] !== undefined) {
+      out += replacements[ch];
+    } else if (code <= 0xff) {
+      // Win-Ansi cubre U+0000..U+00FF (con algunos huecos). Lo dejamos pasar;
+      // si pdf-lib igual lo rechaza, lo agarra el catch del separator.
+      out += ch;
+    } else {
+      // Fuera de Win-Ansi: lo reemplazamos por '?' para no romper el render.
+      out += '?';
+    }
+  }
+  return out;
 }
 
 async function rasterizeToPng(file: File): Promise<ArrayBuffer> {
