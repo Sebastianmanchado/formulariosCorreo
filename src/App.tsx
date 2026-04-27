@@ -89,9 +89,7 @@ function AppInner() {
 
   const handleModedaChange = (next: 'pesos' | 'usd') => {
     const ok = window.confirm(
-      `¿Cambiar la moneda a ${next.toUpperCase()}?\n\n` +
-        `Se van a borrar los montos cargados (resumen, detalle y anexos).\n` +
-        `Se conservan: cotización USD, denominación del proyecto, descripción y objetivos.`
+      '¿Desea continuar? Se perderán los campos numéricos ya cargados.'
     );
     if (!ok) return;
 
