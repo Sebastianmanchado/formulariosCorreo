@@ -18,9 +18,8 @@ import {
   nuevaFilaAnexo,
   type Proyecto,
 } from '../../schemas/proyecto';
-import { AUTORIZACIONES } from '../../data/constants';
 import { formatMoneyZero, formatUsdFromMiles } from '../../utils/formatters';
-import { MoneyInput, SectionTitle, SignatureBox } from '../ui';
+import { MoneyInput, SectionTitle } from '../ui';
 
 /** Total columnas: 1 concepto + 1 cant + 1 ctoUnit + 1 costoTotal + 12 meses + 1 totalAnual + 2 año extra + 1 acciones = 20 */
 const COLSPAN = 20;
@@ -109,16 +108,11 @@ export function AnexosActivosForm() {
         cotizacion={cotizacion}
       />
 
-      {/* Autorizaciones al final — se imprimen como última página del PDF. */}
-      <SectionTitle>C. Autorizaciones</SectionTitle>
-      <div className="mb-3 text-[11px] italic text-ink-muted">
-        Las firmas y fechas se completan a mano tras imprimir el formulario.
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {AUTORIZACIONES.map((a) => (
-          <SignatureBox key={a.key} title={a.label} />
-        ))}
-      </div>
+      {/*
+        Las autorizaciones (firmas de los 7 aprobadores de APEM) viven
+        exclusivamente en la página 2 del Resumen Ejecutivo del PDF — no se
+        imprimen al final del reporte completo ni aparecen en este formulario.
+      */}
     </div>
   );
 }

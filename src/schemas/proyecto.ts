@@ -151,13 +151,16 @@ const opinionesSchema = z.object({
 // futura (y para que la migración de borradores v2 no rompa).
 const autorizacionSchema = z.object({}).partial();
 
+// Aprobadores de APEM — las 7 keys se mantienen alineadas con `AUTORIZACIONES`
+// en `src/data/constants.ts`.
 const autorizacionesSchema = z.object({
-  gerenciaProponente: autorizacionSchema.default({}),
-  direccionProponente: autorizacionSchema.default({}),
-  subdireccionIT: autorizacionSchema.default({}),
-  planeamientoEstrategico: autorizacionSchema.default({}),
-  direccionAdministracion: autorizacionSchema.default({}),
-  direccionGeneral: autorizacionSchema.default({}),
+  gerenteProponente: autorizacionSchema.default({}),
+  directorProponente: autorizacionSchema.default({}),
+  subdirectorGralProponente: autorizacionSchema.default({}),
+  directorPlaneamiento: autorizacionSchema.default({}),
+  subdirectorGralInnovacion: autorizacionSchema.default({}),
+  directorGeneral: autorizacionSchema.default({}),
+  directorio: autorizacionSchema.default({}),
 });
 
 // ─── Carátula completa ──────────────────────────────────────────────────────

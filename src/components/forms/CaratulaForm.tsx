@@ -38,8 +38,9 @@ export function CaratulaForm({ onMonedaChange }: CaratulaFormProps) {
       <InfoTISection />
       <EvaluacionEconomicaSection />
       <OpinionesSection />
-      {/* Las autorizaciones se movieron al final de la solapa "Anexos Activos"
-          para que queden como última página del PDF impreso. */}
+      {/* Las autorizaciones (7 aprobadores de APEM) viven exclusivamente en la
+          página 2 del Resumen Ejecutivo del PDF — no se piden en el formulario
+          porque se firman a mano tras imprimir. */}
     </div>
   );
 }
@@ -678,10 +679,13 @@ function OpinionesSection() {
         Dejar en blanco — se llena a mano en el resumen ejecutivo.
       </div>
       <Card>
-        <Field label="Planeamiento Estratégico y Control de Gestión" labelWidth="280px">
+        <Field label="Director de Planeamiento Estratégico de Negocios" labelWidth="280px">
           <TextArea rows={3} {...register('caratula.opiniones.planeamiento')} />
         </Field>
-        <Field label="Administración y Finanzas" labelWidth="280px">
+        <Field
+          label="Sub Director General de Innovación y Transformación Corporativa"
+          labelWidth="280px"
+        >
           <TextArea rows={3} {...register('caratula.opiniones.administracion')} />
         </Field>
         <Field label="Áreas de Apoyo" labelWidth="280px">

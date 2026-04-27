@@ -19,13 +19,18 @@ export const MODALIDADES_EVALUACION = [
 export type TipoErogacion = (typeof TIPOS_EROGACION)[number]['value'];
 export type ModalidadEvaluacion = (typeof MODALIDADES_EVALUACION)[number]['value'];
 
+/**
+ * Aprobadores de APEM — secuencia oficial de firmas.
+ * El orden importa: se imprime en el PDF en este mismo orden.
+ */
 export const AUTORIZACIONES = [
-  { key: 'gerenciaProponente', label: 'Gerencia Proponente' },
-  { key: 'direccionProponente', label: 'Dirección Proponente' },
-  { key: 'subdireccionIT', label: 'Subdirección de IT' },
-  { key: 'planeamientoEstrategico', label: 'Gerencia de Planeamiento Estratégico y Control de Gestión' },
-  { key: 'direccionAdministracion', label: 'Dirección de Administración' },
-  { key: 'direccionGeneral', label: 'Dirección General' },
+  { key: 'gerenteProponente', label: '1. Gerente Proponente' },
+  { key: 'directorProponente', label: '2. Director Proponente' },
+  { key: 'subdirectorGralProponente', label: '3. Sub Director General Proponente' },
+  { key: 'directorPlaneamiento', label: '4. Director de Planeamiento Estratégico de Negocios' },
+  { key: 'subdirectorGralInnovacion', label: '5. Sub Director General de Innovación y Transformación Corporativa' },
+  { key: 'directorGeneral', label: '6. Director General' },
+  { key: 'directorio', label: '7. Directorio' },
 ] as const;
 
 export type AutorizacionKey = (typeof AUTORIZACIONES)[number]['key'];

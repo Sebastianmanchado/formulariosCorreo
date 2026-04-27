@@ -89,15 +89,50 @@ function AppInner() {
 
   const handleModedaChange = (next: 'pesos' | 'usd') => {
     const ok = window.confirm(
-      `¿Cambiar la moneda a ${next.toUpperCase()}?\n\nSe va a borrar TODO lo cargado y el formulario arrancará desde cero en la nueva moneda.`
+      `¿Cambiar la moneda a ${next.toUpperCase()}?\n\n` +
+        `Se van a borrar los montos cargados (resumen, detalle y anexos).\n` +
+        `Se conservan: cotización USD, denominación del proyecto, descripción y objetivos.`
     );
     if (!ok) return;
+
+    // Tomamos una foto del estado actual para rescatar los campos que
+    // sobreviven al cambio de moneda. El resto arranca desde cero.
+    const current = methods.getValues();
     const fresh = crearProyectoVacio();
-    // aplicamos el nuevo modo al proyecto limpio antes del reset
-    if (fresh.caratula) fresh.caratula.monedaEntrada = next;
+
+    if (fresh.caratula) {
+      fresh.caratula.monedaEntrada = next;
+
+      // Cotización USD — la persistimos siempre, aún en modo pesos.
+      if (current.caratula?.cotizacionUsd !== undefined) {
+        fresh.caratula.cotizacionUsd = current.caratula.cotizacionUsd;
+      }
+
+      // Descripción general: denominación + textos libres + flags + anexos
+      // adjuntos. NO copiamos tipoErogacion/modalidadEvaluacion porque
+      // pueden depender del armado económico que se está rehaciendo.
+      const curDesc = current.caratula?.descripcion;
+      if (curDesc && fresh.caratula.descripcion) {
+        fresh.caratula.descripcion.denominacion = curDesc.denominacion ?? '';
+        fresh.caratula.descripcion.descripcion = curDesc.descripcion ?? '';
+        fresh.caratula.descripcion.descripcionIncluyeAnexo =
+          curDesc.descripcionIncluyeAnexo ?? false;
+        fresh.caratula.descripcion.descripcionAnexos =
+          curDesc.descripcionAnexos ?? [];
+        fresh.caratula.descripcion.objetivos = curDesc.objetivos ?? '';
+        fresh.caratula.descripcion.objetivosIncluyeAnexo =
+          curDesc.objetivosIncluyeAnexo ?? false;
+        fresh.caratula.descripcion.objetivosAnexos =
+          curDesc.objetivosAnexos ?? [];
+      }
+    }
+
     methods.reset(fresh);
-    persist.clearStorage();
-    attachments.clearAll();
+    // Flush inmediato del borrador ya depurado.
+    persist.saveNow();
+    // NO limpiamos `attachments`: los blobs referenciados por
+    // `descripcionAnexos`/`objetivosAnexos` siguen siendo válidos tras el
+    // cambio de moneda y los necesitamos para imprimir adjuntos en el PDF.
     window.scrollTo({ top: 0, behavior: 'smooth' });
     history.replaceState(null, '', '#caratula');
   };

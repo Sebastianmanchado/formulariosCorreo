@@ -4,7 +4,8 @@
       "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
       "Bash(npx tsc *)",
       "Bash(npx vite *)",
-      "Bash(grep -rn \"miles de pesos\\\\|\\(m\\\\$\\)\\\\|m\\\\\\\\\\\\$\" \"C:/Users/sebas/OneDrive/Documentos/correoArg/src/\" --include=\"*.tsx\" --include=\"*.ts\")"
+      "Bash(grep -rn \"miles de pesos\\\\|\\(m\\\\$\\)\\\\|m\\\\\\\\\\\\$\" \"C:/Users/sebas/OneDrive/Documentos/correoArg/src/\" --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(echo \"TSC exit: $?\")"
     ]
   }
 }

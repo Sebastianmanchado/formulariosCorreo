@@ -46,10 +46,13 @@ type Props = {
  * orientación se pasa en `data-pdf-orientation` y el generador la lee.
  *
  * Estructura del PDF:
- *   1. Resumen ejecutivo (1-2 páginas): nombre del proyecto + tablas pesos/USD
- *      + opiniones + firmas en blanco.
- *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos,
- *      Autorizaciones.
+ *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
+ *        · pg 1: nombre del proyecto + cotización + tabla USD + observaciones
+ *          (Dir. Planeamiento / Subdir. Innovación / Áreas de apoyo).
+ *        · pg 2: autorizaciones — 7 firmas de los Aprobadores de APEM.
+ *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
+ *      (Las firmas NO se repiten al final del reporte: viven sólo en el
+ *       Resumen Ejecutivo.)
  */
 export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   { values },
@@ -76,13 +79,20 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   const pages = useMemo<PageDef[]>(() => {
     const list: PageDef[] = [];
 
-    // ─── Resumen ejecutivo (primera página del PDF, 1 carilla) ────────────
+    // ─── Resumen ejecutivo (primeras páginas del PDF, 2 carillas) ─────────
+    // Pensado para imprimirse a doble faz: página 1 = tablas + observaciones,
+    // página 2 = autorizaciones (las 7 firmas de los aprobadores de APEM).
     list.push({
       key: 'resumen-exec',
       orientation: 'portrait',
       content: (
         <ResumenEjecutivoPage values={values} totales={totalesCaratula} />
       ),
+    });
+    list.push({
+      key: 'resumen-exec-autorizaciones',
+      orientation: 'portrait',
+      content: <ResumenEjecutivoAutorizacionesPage />,
     });
 
     // ─── Reporte completo ─────────────────────────────────────────────────
@@ -199,11 +209,8 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
       });
     }
 
-    list.push({
-      key: 'autorizaciones',
-      orientation: 'portrait',
-      content: <AutorizacionesPage />,
-    });
+    // Las autorizaciones al final del PDF fueron eliminadas a propósito:
+    // las firmas viven únicamente en el Resumen Ejecutivo (página 2).
 
     return list;
   }, [values, totalesCaratula, totalesDetalle, totalesAnexos]);
@@ -382,15 +389,15 @@ function ResumenEjecutivoPage({
           fontSize: '8pt',
           color: '#6b6158',
           fontStyle: 'italic',
-          marginBottom: '2mm',
+          marginBottom: '3mm',
         }}
       >
         Las observaciones se completan a mano tras imprimir.
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '3mm' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4mm' }}>
         {[
-          'Planeamiento Estratégico y Control de Gestión',
-          'Administración y Finanzas',
+          'Director de Planeamiento Estratégico de Negocios',
+          'Sub Director General de Innovación y Transformación Corporativa',
           'Áreas de Apoyo',
         ].map((label) => (
           <div
@@ -398,23 +405,23 @@ function ResumenEjecutivoPage({
             style={{
               border: '1px solid #c8c0b4',
               borderRadius: '2px',
-              padding: '2mm 3mm',
+              padding: '3mm 4mm',
               background: '#ffffff',
-              minHeight: '18mm',
+              minHeight: '38mm',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             <div
               style={{
-                fontSize: '7.5pt',
+                fontSize: '8pt',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 color: '#1a3a5c',
                 letterSpacing: '0.3px',
                 borderBottom: '1px solid #e8e0d4',
-                paddingBottom: '1mm',
-                marginBottom: '1.5mm',
+                paddingBottom: '1.5mm',
+                marginBottom: '2mm',
               }}
             >
               {label}
@@ -423,43 +430,55 @@ function ResumenEjecutivoPage({
           </div>
         ))}
       </div>
+    </>
+  );
+}
 
-      <SectionTitle>Autorizaciones</SectionTitle>
+/**
+ * Autorizaciones del Resumen Ejecutivo — se imprime en la segunda página
+ * (pensado para doble faz con la caratula principal). 7 firmas en grilla 2×4
+ * con la última celda vacía.
+ */
+function ResumenEjecutivoAutorizacionesPage() {
+  return (
+    <>
+      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
       <div
         style={{
-          fontSize: '8pt',
+          fontSize: '9pt',
           color: '#6b6158',
           fontStyle: 'italic',
-          marginBottom: '2mm',
+          marginTop: '2mm',
+          marginBottom: '5mm',
         }}
       >
-        Las firmas y fechas se completan a mano tras imprimir.
+        Las firmas y fechas se completan a mano tras imprimir el formulario.
       </div>
-      <Grid cols="repeat(3, 1fr)" gap="3mm">
+      <Grid cols="repeat(2, 1fr)" gap="5mm">
         {AUTORIZACIONES.map((a) => (
           <div
             key={a.key}
             style={{
               border: '1px solid #c8c0b4',
               borderRadius: '2px',
-              padding: '2mm 2.5mm',
+              padding: '3mm 4mm',
               background: '#ffffff',
-              minHeight: '32mm',
+              minHeight: '52mm',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             <div
               style={{
-                fontSize: '6.5pt',
+                fontSize: '8pt',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 color: '#1a3a5c',
                 letterSpacing: '0.3px',
                 borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '1mm',
-                marginBottom: '1.5mm',
-                minHeight: '7mm',
+                paddingBottom: '2mm',
+                marginBottom: '3mm',
+                minHeight: '9mm',
               }}
             >
               {a.label}
@@ -468,17 +487,17 @@ function ResumenEjecutivoPage({
             <div
               style={{
                 borderBottom: '1px solid #6b6158',
-                height: '9mm',
-                marginBottom: '1.5mm',
+                height: '18mm',
+                marginBottom: '2mm',
               }}
             />
             <div
               style={{
-                fontSize: '7pt',
+                fontSize: '8pt',
                 color: '#6b6158',
                 display: 'flex',
                 alignItems: 'baseline',
-                gap: '1.5mm',
+                gap: '2mm',
               }}
             >
               <span>Fecha:</span>
@@ -881,77 +900,6 @@ function CaratulaPage3({
           label="Período de repago (meses)"
           value={c?.evaluacion?.periodoRepagoMeses?.toString() || '—'}
         />
-      </Grid>
-    </>
-  );
-}
-
-function AutorizacionesPage() {
-  return (
-    <>
-      <PageHeadingRow tag="C." title="Autorizaciones" />
-      <div
-        style={{
-          fontSize: '9pt',
-          color: '#6b6158',
-          fontStyle: 'italic',
-          marginTop: '3mm',
-          marginBottom: '6mm',
-        }}
-      >
-        Las firmas y fechas se completan a mano tras imprimir el formulario.
-      </div>
-      <Grid cols="repeat(2, 1fr)" gap="8mm">
-        {AUTORIZACIONES.map((a) => (
-          <div
-            key={a.key}
-            style={{
-              border: '1px solid #c8c0b4',
-              borderRadius: '2px',
-              padding: '5mm',
-              background: '#ffffff',
-              minHeight: '55mm',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '8.5pt',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#1a3a5c',
-                letterSpacing: '0.4px',
-                borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '3mm',
-                marginBottom: '5mm',
-                minHeight: '10mm',
-              }}
-            >
-              {a.label}
-            </div>
-            <div style={{ flex: 1 }} />
-            <div
-              style={{
-                borderBottom: '1px solid #6b6158',
-                height: '20mm',
-                marginBottom: '3mm',
-              }}
-            />
-            <div
-              style={{
-                fontSize: '9pt',
-                color: '#6b6158',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '3mm',
-              }}
-            >
-              <span>Fecha:</span>
-              <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
-            </div>
-          </div>
-        ))}
       </Grid>
     </>
   );
