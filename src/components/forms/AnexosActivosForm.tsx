@@ -52,7 +52,7 @@ export function AnexosActivosForm() {
           </div>
         </div>
         <div className="pb-1 text-[11px] italic text-ink-muted">
-          Importes en millones de pesos
+          Importes en MM Pesos o USD según moneda seleccionada
         </div>
       </div>
 
@@ -184,8 +184,8 @@ function SubseccionTable({
                 Concepto
               </Th>
               <Th>Cant.</Th>
-              <Th>Cto. unit. (pesos)</Th>
-              <Th highlight>Costo Total (pesos)</Th>
+              <Th>Cto. unit.</Th>
+              <Th highlight>Costo Total</Th>
               {MESES_KEYS.map((m) => (
                 <Th key={m}>{MESES_LABELS[m]}</Th>
               ))}
@@ -367,7 +367,7 @@ function TotalRow({
       <tr>
         <td className="sticky left-0 z-10 border-t-2 border-r-2 border-border-strong bg-total p-0">
           <div className="px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
-            Total <span className="font-normal text-ink-muted">(pesos)</span>
+            Total
           </div>
         </td>
         <td className="border-t-2 border-border-strong bg-total" />
@@ -446,7 +446,7 @@ function TotalAgregadoBox({
         <tbody>
           <tr>
             <td className="border-r border-accent/30 bg-accent/10 px-2 py-1.5 text-[11px] font-bold uppercase text-accent">
-              Total <span className="font-normal text-ink-muted">(pesos)</span>
+              Total
             </td>
             <td className="bg-accent/10" />
             <td className="bg-accent/10" />

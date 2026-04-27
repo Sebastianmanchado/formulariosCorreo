@@ -1,4 +1,5 @@
-import { useFormContext, useWatch } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import { MODALIDADES_EVALUACION, TIPOS_EROGACION } from '../../data/constants';
 import { DESCRIPCION_MAX, type Proyecto } from '../../schemas/proyecto';
 import { useCalculatedTotals } from '../../hooks/useCalculatedTotals';
@@ -51,7 +52,6 @@ function CotizacionSection({
 }: {
   onMonedaChange: (next: 'pesos' | 'usd') => void;
 }) {
-  const { control } = useFormContext<Proyecto>();
   return (
     <Card>
       <div className="flex flex-col gap-3">
@@ -62,26 +62,119 @@ function CotizacionSection({
           >
             Cotización USD (pesos por dólar)
           </label>
-          <div className="w-[220px]">
-            <MoneyInput
-              control={control}
-              name="caratula.cotizacionUsd"
-              placeholder="0,00"
-              suffix="$/USD"
-              id="cotizacionUsd"
-              fixedCurrency="pesos"
-            />
-          </div>
+          <CotizacionInput />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-            Moneda de entrada:
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] italic text-ink-muted/70">
+            Seleccione la moneda en la que desea ingresar los montos del proyecto
           </span>
-          <MonedaToggle onRequestModeChange={onMonedaChange} />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+              Moneda de entrada:
+            </span>
+            <MonedaToggle onRequestModeChange={onMonedaChange} />
+          </div>
         </div>
       </div>
     </Card>
   );
+}
+
+/**
+ * Input para la cotización USD. Usa un estado local de string para permitir
+ * tipear cómodamente decimales (incluyendo el caso "1180," con coma final
+ * mientras el usuario va a tipear la parte decimal). Sincroniza con el form
+ * state vía `useWatch` + `setValue`:
+ *   • `useWatch` se asegura de que un `methods.reset()` externo limpie el
+ *     input visualmente (apenas el value del form baja a undefined/null,
+ *     forzamos el text local a '').
+ *   • Al perder foco, se reformatea desde el form value (con coma decimal).
+ *   • Mientras el input está enfocado, el texto local manda — no lo
+ *     sobreescribimos en cada keystroke.
+ */
+function CotizacionInput() {
+  const { control, setValue } = useFormContext<Proyecto>();
+  const formValue = useWatch({
+    control,
+    name: 'caratula.cotizacionUsd',
+  });
+  const [text, setText] = useState<string>(() => formatLocalNumber(formValue));
+  const [focused, setFocused] = useState(false);
+
+  // Ref que rastrea el último valor que ESTE componente escribió al form.
+  // Sirve para distinguir un cambio "propio" (porque el usuario está
+  // tipeando) de un cambio "externo" (un methods.reset() u otro setValue
+  // desde afuera). Sin esto, el useEffect borraba el texto cada vez que
+  // el usuario tipeaba una coma final ("1180,"), porque eso baja
+  // momentáneamente el form value a undefined.
+  const lastSelfWroteRef = useRef<number | null | undefined>(formValue);
+
+  useEffect(() => {
+    if (formValue === lastSelfWroteRef.current) return;
+    // Cambio externo detectado (no vino de nuestro onChange).
+    lastSelfWroteRef.current = formValue;
+    if (formValue === undefined || formValue === null) {
+      // Clear externo (ej: handleReset) — vaciamos siempre, incluso focused.
+      setText('');
+    } else if (!focused) {
+      // Cambio numérico externo y el usuario no está tipeando — sincronizamos.
+      setText(formatLocalNumber(formValue));
+    }
+  }, [formValue, focused]);
+
+  return (
+    <div className="relative w-[220px]">
+      <input
+        id="cotizacionUsd"
+        type="text"
+        inputMode="decimal"
+        placeholder="0,00"
+        value={text}
+        onFocus={(e) => {
+          setFocused(true);
+          e.currentTarget.select();
+        }}
+        onBlur={() => {
+          setFocused(false);
+          // Al perder foco, reformateamos el texto desde el form value real
+          // para limpiar separadores colgados ("1180," → "1180").
+          setText(formatLocalNumber(formValue));
+        }}
+        onChange={(e) => {
+          const v = e.target.value;
+          // Permitimos sólo dígitos, coma, punto y signo menos al inicio.
+          if (!/^-?[\d.,]*$/.test(v)) return;
+          setText(v);
+
+          // Parseo: coma → punto, intentamos Number().
+          const normalized = v.replace(',', '.');
+          let next: number | undefined;
+          if (normalized === '' || normalized === '-' || normalized === '.') {
+            next = undefined;
+          } else {
+            const num = Number(normalized);
+            // `Number("1180.") === 1180` (válido). NaN sólo cuando es basura
+            // tipo "1.2.3" — en ese caso ignoramos el cambio para no perder
+            // el form value previo.
+            if (Number.isNaN(num)) return;
+            next = num;
+          }
+          lastSelfWroteRef.current = next;
+          setValue('caratula.cotizacionUsd', next, { shouldDirty: true });
+        }}
+        className="w-full rounded-sm border border-border-input bg-white px-2 py-1.5 pr-14 text-right font-mono text-[12px] tabular-nums text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20"
+      />
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-ink-muted">
+        $/USD
+      </span>
+    </div>
+  );
+}
+
+/** Formato local AR: punto decimal → coma. No agrega separador de miles. */
+function formatLocalNumber(n: number | null | undefined): string {
+  if (n === undefined || n === null || Number.isNaN(n)) return '';
+  return String(n).replace('.', ',');
 }
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
@@ -317,19 +410,19 @@ function ResumenMontosSection() {
           <thead>
             <tr>
               <th className="w-[38%] border border-accent-light bg-accent px-2 py-1.5 text-left text-[11px] font-semibold text-white">
-                Concepto <span className="font-normal text-white/70">(pesos)</span>
+                Concepto <span className="font-normal text-white/70">(MM Pesos)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicio actual (pesos)
+                Ejercicio actual (MM Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicios siguientes (pesos)
+                Ejercicios siguientes (MM Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Total (pesos)
+                Total (MM Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Previsto en Presupuesto (pesos)
+                Previsto en Presupuesto (MM Pesos)
               </th>
             </tr>
           </thead>
@@ -514,7 +607,7 @@ function DetalleInversionSection() {
 
   return (
     <>
-      <SectionTitle variant="sub">Detalle del Monto Total a Invertir (en millones de pesos)</SectionTitle>
+      <SectionTitle variant="sub">Detalle del Monto Total a Invertir (en moneda ingresada)</SectionTitle>
       <div className="grid gap-4 md:grid-cols-2">
         {/* Activable + No activable */}
         <div className="rounded-sm border border-border bg-white p-3.5">
@@ -634,12 +727,6 @@ function InfoTISection() {
 
 // ─── B. Evaluación económica ────────────────────────────────────────────────
 function EvaluacionEconomicaSection() {
-  const { register } = useFormContext<Proyecto>();
-  const numberRegister = (name: Parameters<typeof register>[0]) =>
-    register(name, {
-      setValueAs: (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
-    });
-
   return (
     <>
       <SectionTitle>B. Resultados de la Evaluación Económica</SectionTitle>
@@ -649,19 +736,19 @@ function EvaluacionEconomicaSection() {
       <Card>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Horizonte de la evaluación (meses)" orientation="column">
-            <Input type="number" step="1" min="0" {...numberRegister('caratula.evaluacion.horizonteMeses')} />
+            <NumberInputControlled name="caratula.evaluacion.horizonteMeses" />
           </Field>
           <Field label="Tasa Interna de Retorno anual (TIR) %" orientation="column">
-            <Input type="number" step="0.01" {...numberRegister('caratula.evaluacion.tir')} />
+            <NumberInputControlled name="caratula.evaluacion.tir" />
           </Field>
           <Field label="Tasa de corte %" orientation="column">
-            <Input type="number" step="0.01" {...numberRegister('caratula.evaluacion.tasaCorte')} />
+            <NumberInputControlled name="caratula.evaluacion.tasaCorte" />
           </Field>
-          <Field label="Valor Actual Neto (VAN, en millones de pesos)" orientation="column">
-            <Input type="number" step="0.01" {...numberRegister('caratula.evaluacion.van')} />
+          <Field label="VAN, en MM Pesos o USD según moneda ingresada" orientation="column">
+            <NumberInputControlled name="caratula.evaluacion.van" />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
-            <Input type="number" step="1" min="0" {...numberRegister('caratula.evaluacion.periodoRepagoMeses')} />
+            <NumberInputControlled name="caratula.evaluacion.periodoRepagoMeses" />
           </Field>
         </div>
       </Card>
@@ -697,7 +784,47 @@ function OpinionesSection() {
 }
 
 // ─── Helpers locales ────────────────────────────────────────────────────────
-import type { Control, FieldPath } from 'react-hook-form';
+import type { Control } from 'react-hook-form';
+
+/**
+ * Input numérico totalmente controlado por React (no usa `register` ni `ref`
+ * de RHF). Lee el valor con `useWatch` y escribe con `setValue`.
+ *
+ * El input es `type="text"` con `inputMode="decimal"` — `type="number"`
+ * tiene quirks de browser que en algunos casos hacen que el DOM no se
+ * actualice tras `methods.reset(...)`. Usamos un raw `<input>` (sin el
+ * wrapper `<Input>`) para descartar cualquier interferencia del forwardRef.
+ */
+function NumberInputControlled({ name }: { name: FieldPath<Proyecto> }) {
+  const { control, setValue } = useFormContext<Proyecto>();
+  const raw = useWatch({ control, name });
+  const value =
+    raw === undefined || raw === null || Number.isNaN(raw as number)
+      ? ''
+      : String(raw);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value;
+        // Permitimos sólo dígitos, signo, coma y punto decimal mientras se
+        // tipea. Convertimos coma → punto para parseFloat.
+        const cleaned = v.replace(',', '.');
+        if (cleaned === '' || cleaned === '-') {
+          setValue(name, undefined as never, { shouldDirty: true });
+          return;
+        }
+        const num = Number(cleaned);
+        if (Number.isNaN(num)) return;
+        setValue(name, num as never, { shouldDirty: true });
+      }}
+      className="w-full rounded-sm border border-border-input bg-white px-2 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20"
+    />
+  );
+}
 
 /**
  * Fila de "label + MoneyInput" con grid de 2 columnas. La columna del input
@@ -737,19 +864,10 @@ function TotalRow({
 }) {
   const isStrong = emphasis === 'strong';
   const weight = isStrong ? 'font-bold' : 'font-semibold';
-  const hasUsd = cotizacion !== undefined;
 
-  if (!hasUsd) {
-    return (
-      <div
-        className={`grid grid-cols-[1fr_170px] items-center gap-3 border-t border-border pt-1.5 ${className}`}
-      >
-        <span className={`text-[12px] ${weight}`}>{label}</span>
-        <CalculatedField value={value} emphasis={emphasis} />
-      </div>
-    );
-  }
-
+  // Renderizamos SIEMPRE las dos filas (pesos + USD). Cuando no hay
+  // cotización válida, `formatUsdFromMiles` devuelve "—" en la fila USD,
+  // pero la estructura visual del bloque se mantiene.
   const usdClass = `rounded-sm border border-accent/20 bg-white px-2 py-1.5 text-right font-mono text-accent ${
     isStrong ? 'text-[13px] font-bold' : 'text-[12px] font-semibold'
   }`;
@@ -760,7 +878,7 @@ function TotalRow({
     >
       <div className="grid grid-cols-[1fr_170px] items-center gap-3">
         <span className={`text-[12px] ${weight}`}>
-          {label} <span className="font-normal text-ink-muted">(pesos)</span>
+          {label} <span className="font-normal text-ink-muted">(MM Pesos)</span>
         </span>
         <CalculatedField value={value} emphasis={emphasis} />
       </div>

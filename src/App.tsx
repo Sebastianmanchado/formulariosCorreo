@@ -81,6 +81,14 @@ function AppInner() {
     );
     if (!ok) return;
     methods.reset(crearProyectoVacio());
+    // Defensive: forzar undefined en campos numéricos que algunos inputs
+    // (Controller + MoneyInput) no actualizan de forma confiable tras reset.
+    methods.setValue('caratula.cotizacionUsd', undefined, { shouldDirty: false });
+    methods.setValue('caratula.evaluacion.horizonteMeses', undefined, { shouldDirty: false });
+    methods.setValue('caratula.evaluacion.tir', undefined, { shouldDirty: false });
+    methods.setValue('caratula.evaluacion.tasaCorte', undefined, { shouldDirty: false });
+    methods.setValue('caratula.evaluacion.van', undefined, { shouldDirty: false });
+    methods.setValue('caratula.evaluacion.periodoRepagoMeses', undefined, { shouldDirty: false });
     persist.clearStorage();
     attachments.clearAll();
     window.scrollTo({ top: 0, behavior: 'smooth' });

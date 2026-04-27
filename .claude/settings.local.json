@@ -5,7 +5,15 @@
       "Bash(npx tsc *)",
       "Bash(npx vite *)",
       "Bash(grep -rn \"miles de pesos\\\\|\\(m\\\\$\\)\\\\|m\\\\\\\\\\\\$\" \"C:/Users/sebas/OneDrive/Documentos/correoArg/src/\" --include=\"*.tsx\" --include=\"*.ts\")",
-      "Bash(echo \"TSC exit: $?\")"
+      "Bash(echo \"TSC exit: $?\")",
+      "Bash(cat)",
+      "Bash(node /tmp/test-empty.mjs)",
+      "Bash(node test-empty.mjs)",
+      "Bash(rm test-empty.mjs)",
+      "Bash(node test-vacio.mjs)",
+      "Bash(rm test-vacio.mjs)",
+      "Bash(npx tsx *)",
+      "Bash(rm test-real.mjs)"
     ]
   }
 }

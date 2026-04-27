@@ -615,7 +615,7 @@ function CaratulaPage2({
         <thead>
           <tr>
             <Th align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(pesos)</span>
+              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
             </Th>
             <Th>Ejercicio actual</Th>
             <Th>Siguientes</Th>
@@ -758,14 +758,14 @@ function CaratulaPage3({
   return (
     <>
       <PageHeadingRow tag="①" title="Carátula" />
-      <SectionTitle>Detalle del Monto Total a Invertir (en millones de pesos)</SectionTitle>
+      <SectionTitle>Detalle del Monto Total a Invertir (en moneda ingresada)</SectionTitle>
       <Grid cols="1fr 1fr">
         <Box title="Activable">
           <MoneyLine label="1. Hardware" v={c?.detalleInversion?.activable?.hardware} />
           <MoneyLine label="2. Software" v={c?.detalleInversion?.activable?.software} />
           <MoneyLine label="3. Otros" v={c?.detalleInversion?.activable?.otros} />
           <MoneyLine
-            label="Total activable (pesos)"
+            label="Total activable (MM Pesos)"
             v={totales.detalle.totalActivable}
             total
           />
@@ -787,7 +787,7 @@ function CaratulaPage3({
             />
           ))}
           <MoneyLine
-            label="Total no activable (pesos)"
+            label="Total no activable (MM Pesos)"
             v={totales.detalle.totalNoActivable}
             total
           />
@@ -797,7 +797,7 @@ function CaratulaPage3({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total costo de la inversión (pesos)"
+            label="Total costo de la inversión (MM Pesos)"
             v={totales.detalle.totalInversion}
             emphasize
           />
@@ -821,7 +821,7 @@ function CaratulaPage3({
             />
           ))}
           <MoneyLine
-            label="Total gastos incrementales corrientes (pesos)"
+            label="Total gastos incrementales corrientes (MM Pesos)"
             v={totales.detalle.totalGastosIncrementales}
             total
           />
@@ -840,7 +840,7 @@ function CaratulaPage3({
           <MoneyLine label="2. Costos de instalación" v={c?.infoTI?.hardware?.instalacion} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.hardware?.otros} />
           <MoneyLine
-            label="Total costos Hardware (pesos)"
+            label="Total costos Hardware (MM Pesos)"
             v={totales.ti.totalHardware}
             total
           />
@@ -855,7 +855,7 @@ function CaratulaPage3({
           <MoneyLine label="2. Apoyo externo" v={c?.infoTI?.software?.apoyoExterno} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.software?.otros} />
           <MoneyLine
-            label="Total costos Software (pesos)"
+            label="Total costos Software (MM Pesos)"
             v={totales.ti.totalSoftware}
             total
           />
@@ -865,7 +865,7 @@ function CaratulaPage3({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total Hardware + Software (pesos)"
+            label="Total Hardware + Software (MM Pesos)"
             v={totales.ti.totalHwSw}
             emphasize
           />
@@ -893,7 +893,7 @@ function CaratulaPage3({
           value={formatPercent(c?.evaluacion?.tasaCorte) || '—'}
         />
         <MiniField
-          label="Valor Actual Neto (VAN, pesos)"
+          label="VAN, en MM Pesos o USD según moneda ingresada"
           value={formatMoneyZero(c?.evaluacion?.van)}
         />
         <MiniField
@@ -952,8 +952,9 @@ function DetalleMensualPageA({
     <>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en millones de pesos. Parte <strong>a) Detalle de la Inversión</strong> —
-        el impacto económico se muestra en la página siguiente.
+        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        <strong>a) Detalle de la Inversión</strong> — el impacto económico se
+        muestra en la página siguiente.
       </Note>
       <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
         <DetalleTableHead />
@@ -1076,8 +1077,9 @@ function DetalleMensualPageB({
     <>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en millones de pesos. Parte <strong>b) Impacto Económico de la Inversión</strong> —
-        el detalle de la inversión está en la página anterior.
+        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        <strong>b) Impacto Económico de la Inversión</strong> — el detalle de
+        la inversión está en la página anterior.
       </Note>
       <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
         <DetalleTableHead />
@@ -1191,8 +1193,8 @@ function AnexoSubsectionBlock({
           <tr>
             <ThSmall align="left">Concepto</ThSmall>
             <ThSmall>Cant.</ThSmall>
-            <ThSmall>Cto. unit. (pesos)</ThSmall>
-            <ThSmall highlight>Costo Total (pesos)</ThSmall>
+            <ThSmall>Cto. unit.</ThSmall>
+            <ThSmall highlight>Costo Total</ThSmall>
             {MESES_KEYS.map((m) => (
               <ThSmall key={m}>{MESES_LABELS[m]}</ThSmall>
             ))}
@@ -1248,7 +1250,7 @@ function AnexoSubsectionBlock({
           {filas.length > 0 && (
             <>
               <tr>
-                <TdS strong>Total (pesos)</TdS>
+                <TdS strong>Total</TdS>
                 <TdS strong />
                 <TdS strong />
                 <TdS num strong>{formatMoneyZero(colTotals.costoTotal)}</TdS>
@@ -1339,7 +1341,7 @@ function AnexosTecnologicosBlock({
         </thead>
         <tbody>
           <tr>
-            <TdS strong>Total (pesos)</TdS>
+            <TdS strong>Total</TdS>
             <TdS />
             <TdS />
             <TdS num strong>{formatMoneyZero(col.costoTotal)}</TdS>
@@ -1394,7 +1396,7 @@ function AnexosGroupPage({
   return (
     <>
       <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
-      <Note>Importes en millones de pesos.</Note>
+      <Note>Importes en MM Pesos o USD según moneda seleccionada.</Note>
       {children}
     </>
   );

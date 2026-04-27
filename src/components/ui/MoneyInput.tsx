@@ -50,14 +50,30 @@ function MoneyInputInner({
   );
   const lastExternal = useRef<number | null | undefined>(value);
 
+  // Sync `raw` con `value` cuando este cambia desde afuera (reset, setValue
+  // programático, etc.). Antes este efecto sólo corría si el input no estaba
+  // focuseado, dejando un caso borde: si el usuario clickeaba "Limpiar"
+  // mientras tenía el input activo, `raw` quedaba con el texto viejo.
+  // Ahora también sincronizamos cuando `value` baja a null/undefined —
+  // un clear externo siempre se respeta.
   useEffect(() => {
-    if (!focused && value !== lastExternal.current) {
-      setRaw(value === null || value === undefined ? '' : String(value));
-      lastExternal.current = value;
+    if (value === lastExternal.current) return;
+    const isExternalClear = value === null || value === undefined;
+    if (!focused || isExternalClear) {
+      setRaw(isExternalClear ? '' : String(value));
     }
+    lastExternal.current = value;
   }, [value, focused]);
 
-  const display = focused ? raw : formatMoney(value);
+  // Si el value efectivo es null/undefined, forzamos display vacío sin
+  // importar el estado de foco — así un reset externo siempre limpia el DOM
+  // visualmente, aunque el input estuviera focuseado en ese momento.
+  const display =
+    value === null || value === undefined
+      ? ''
+      : focused
+        ? raw
+        : formatMoney(value);
 
   return (
     <div className={`relative inline-flex w-full items-center ${className}`}>
