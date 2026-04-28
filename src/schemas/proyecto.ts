@@ -40,7 +40,7 @@ const encabezadoSchema = z.object({
 });
 
 /** Máximo de caracteres para Descripción y Objetivos de la Carátula. */
-export const DESCRIPCION_MAX = 2000;
+export const DESCRIPCION_MAX = 3000;
 
 const longTextCappedField = z
   .string()
@@ -151,13 +151,16 @@ const opinionesSchema = z.object({
 // futura (y para que la migración de borradores v2 no rompa).
 const autorizacionSchema = z.object({}).partial();
 
+// Aprobadores de APEM — las 7 keys se mantienen alineadas con `AUTORIZACIONES`
+// en `src/data/constants.ts`.
 const autorizacionesSchema = z.object({
-  gerenciaProponente: autorizacionSchema.default({}),
-  direccionProponente: autorizacionSchema.default({}),
-  subdireccionIT: autorizacionSchema.default({}),
-  planeamientoEstrategico: autorizacionSchema.default({}),
-  direccionAdministracion: autorizacionSchema.default({}),
-  direccionGeneral: autorizacionSchema.default({}),
+  gerenteProponente: autorizacionSchema.default({}),
+  directorProponente: autorizacionSchema.default({}),
+  subdirectorGralProponente: autorizacionSchema.default({}),
+  directorPlaneamiento: autorizacionSchema.default({}),
+  subdirectorGralInnovacion: autorizacionSchema.default({}),
+  directorGeneral: autorizacionSchema.default({}),
+  directorio: autorizacionSchema.default({}),
 });
 
 // ─── Carátula completa ──────────────────────────────────────────────────────
@@ -168,6 +171,12 @@ export const caratulaSchema = z.object({
   resumenMontos: resumenMontosSchema.default({}),
   /** Cotización de referencia del dólar (pesos por USD). */
   cotizacionUsd: moneyField,
+  /**
+   * Moneda en la que el usuario está cargando los valores. Los montos
+   * siempre se persisten en m$; en modo "usd" los inputs convierten a m$ al
+   * guardar y muestran el equivalente USD al usuario.
+   */
+  monedaEntrada: z.enum(['pesos', 'usd']).optional().default('pesos'),
   detalleInversion: detalleInversionSchema.default({}),
   infoTI: infoTISchema.default({}),
   evaluacion: evaluacionSchema.default({}),
@@ -205,7 +214,6 @@ const filaDetalleSchema = z.object({
 });
 
 export const detalleMensualSchema = z.object({
-  proyecto: textField,     // se pre-carga de caratula.descripcion.denominacion
   inversion: z.object({
     tecnologia: z.object({
       hardware: filaDetalleSchema.default({}),
@@ -256,7 +264,6 @@ const subSeccionAnexoSchema = z.object({
 });
 
 export const anexosActivosSchema = z.object({
-  proyecto: textField,
   hardware: subSeccionAnexoSchema.default({}),
   software: subSeccionAnexoSchema.default({}),
   desarrollosExternos: subSeccionAnexoSchema.default({}),
@@ -295,10 +302,80 @@ export type FilaResumen = z.infer<typeof filaResumenSchema>;
 
 /**
  * Construye un Proyecto vacío con todos los defaults resueltos.
- * Se usa como `defaultValues` de React Hook Form.
+ *
+ * Importante — clave para que el botón "Limpiar" funcione: Zod, al parsear
+ * `{}`, **strippea las claves de los campos `optional()` sin `default()`**
+ * (`numberField`, `moneyField`, etc.). Si esas claves no están presentes en
+ * el objeto, RHF.reset() no recorre esos paths y los inputs quedan con su
+ * valor anterior. Por eso pasamos un input "esqueleto" con todas las claves
+ * declaradas explícitamente como `undefined` — Zod las preserva en el output
+ * cuando vienen explícitas.
  */
 export function crearProyectoVacio(): Proyecto {
-  return proyectoSchema.parse({});
+  // Helpers para ahorrar verbosidad — todas las claves explícitamente undefined.
+  const emptyMeses = (): Record<MesKey, undefined> => ({
+    ene: undefined, feb: undefined, mar: undefined, abr: undefined,
+    may: undefined, jun: undefined, jul: undefined, ago: undefined,
+    sep: undefined, oct: undefined, nov: undefined, dic: undefined,
+  });
+  const emptyFilaResumen = () => ({
+    ejActual: undefined,
+    ejSiguientes: undefined,
+    previsto: undefined,
+  });
+  const emptyFilaDetalle = () => ({ label: '', meses: emptyMeses() });
+
+  return proyectoSchema.parse({
+    caratula: {
+      cotizacionUsd: undefined,
+      resumenMontos: {
+        ingresosAhorros: emptyFilaResumen(),
+        egresosActivables: emptyFilaResumen(),
+        otrosEgresosActivables: emptyFilaResumen(),
+        gastosNoActivables: emptyFilaResumen(),
+        gastosIncrementales: emptyFilaResumen(),
+      },
+      detalleInversion: {
+        activable: { hardware: undefined, software: undefined, otros: undefined },
+      },
+      infoTI: {
+        hardware: { equipos: undefined, instalacion: undefined, otros: undefined },
+        software: { licencias: undefined, apoyoExterno: undefined, otros: undefined },
+      },
+      evaluacion: {
+        horizonteMeses: undefined,
+        tir: undefined,
+        tasaCorte: undefined,
+        van: undefined,
+        periodoRepagoMeses: undefined,
+      },
+    },
+    detalleMensual: {
+      inversion: {
+        tecnologia: {
+          hardware: emptyFilaDetalle(),
+          software: emptyFilaDetalle(),
+          licencias: emptyFilaDetalle(),
+          apoyoExterno: emptyFilaDetalle(),
+          otros: emptyFilaDetalle(),
+        },
+        bienesUso: { fila1: emptyFilaDetalle(), fila2: emptyFilaDetalle() },
+        obras: { fila1: emptyFilaDetalle(), fila2: emptyFilaDetalle() },
+      },
+      noActivable: {
+        capacitacion: emptyFilaDetalle(),
+        movilidades: emptyFilaDetalle(),
+        refacciones: emptyFilaDetalle(),
+        otros: emptyFilaDetalle(),
+      },
+      impacto: {
+        ingresosIncrementales: emptyFilaDetalle(),
+        ahorroGastos: emptyFilaDetalle(),
+        gastosCorrientes: emptyFilaDetalle(),
+        amortizacion: emptyFilaDetalle(),
+      },
+    },
+  });
 }
 
 /**

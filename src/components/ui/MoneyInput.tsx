@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Controller,
+  useFormContext,
+  useWatch,
   type Control,
   type FieldPath,
   type FieldValues,
 } from 'react-hook-form';
+import type { Proyecto } from '../../schemas/proyecto';
 import { formatMoney, parseMoney } from '../../utils/formatters';
 
 type InnerProps = {
@@ -47,14 +50,30 @@ function MoneyInputInner({
   );
   const lastExternal = useRef<number | null | undefined>(value);
 
+  // Sync `raw` con `value` cuando este cambia desde afuera (reset, setValue
+  // programático, etc.). Antes este efecto sólo corría si el input no estaba
+  // focuseado, dejando un caso borde: si el usuario clickeaba "Limpiar"
+  // mientras tenía el input activo, `raw` quedaba con el texto viejo.
+  // Ahora también sincronizamos cuando `value` baja a null/undefined —
+  // un clear externo siempre se respeta.
   useEffect(() => {
-    if (!focused && value !== lastExternal.current) {
-      setRaw(value === null || value === undefined ? '' : String(value));
-      lastExternal.current = value;
+    if (value === lastExternal.current) return;
+    const isExternalClear = value === null || value === undefined;
+    if (!focused || isExternalClear) {
+      setRaw(isExternalClear ? '' : String(value));
     }
+    lastExternal.current = value;
   }, [value, focused]);
 
-  const display = focused ? raw : formatMoney(value);
+  // Si el value efectivo es null/undefined, forzamos display vacío sin
+  // importar el estado de foco — así un reset externo siempre limpia el DOM
+  // visualmente, aunque el input estuviera focuseado en ese momento.
+  const display =
+    value === null || value === undefined
+      ? ''
+      : focused
+        ? raw
+        : formatMoney(value);
 
   return (
     <div className={`relative inline-flex w-full items-center ${className}`}>
@@ -70,8 +89,6 @@ function MoneyInputInner({
         onFocus={(e) => {
           setFocused(true);
           setRaw(value === null || value === undefined ? '' : String(value));
-          // Seleccionar todo al enfocar: así Delete/Backspace o cualquier
-          // tecla nueva sobrescribe el valor (UX tipo planilla).
           e.currentTarget.select();
         }}
         onBlur={() => {
@@ -108,25 +125,80 @@ type Props<T extends FieldValues> = {
   id?: string;
   gridRow?: number;
   gridCol?: number;
+  /**
+   * Forzar el input a una moneda fija, ignorando el toggle global. Útil para
+   * la cotización USD (siempre en pesos).
+   */
+  fixedCurrency?: 'pesos';
 };
 
+/**
+ * Wrapper de MoneyInput que respeta el toggle `caratula.monedaEntrada`:
+ *  • En modo `pesos`: el valor se guarda/muestra tal cual (m$).
+ *  • En modo `usd`: el valor se muestra como USD (equivalente del m$ guardado
+ *    con la cotización) y se reconvierte a m$ al editar.
+ *  • Si `fixedCurrency="pesos"` se pasa, siempre se comporta como pesos.
+ */
 export function MoneyInput<T extends FieldValues>({
   control,
   name,
+  fixedCurrency,
+  suffix,
   ...rest
 }: Props<T>) {
+  // Tipamos el context con Proyecto para poder observar los campos globales.
+  const { control: proyectoCtrl } = useFormContext<Proyecto>();
+  const monedaEntrada = useWatch({
+    control: proyectoCtrl,
+    name: 'caratula.monedaEntrada',
+  });
+  const cotizacion = useWatch({
+    control: proyectoCtrl,
+    name: 'caratula.cotizacionUsd',
+  });
+
+  // Modo efectivo del input: si está forzado a pesos, siempre pesos.
+  // Si el modo global es USD pero la cotización no es válida, degrada a pesos
+  // para no inhabilitar inputs cuando falta el dato.
+  const cotizacionValida =
+    typeof cotizacion === 'number' && cotizacion > 0 && Number.isFinite(cotizacion);
+  const modeUsd =
+    fixedCurrency !== 'pesos' &&
+    monedaEntrada === 'usd' &&
+    cotizacionValida;
+
   return (
     <Controller
       control={control}
       name={name}
-      render={({ field }) => (
-        <MoneyInputInner
-          value={field.value as number | null | undefined}
-          onChange={field.onChange}
-          onBlur={field.onBlur}
-          {...rest}
-        />
-      )}
+      render={({ field }) => {
+        const stored = field.value as number | null | undefined;
+
+        const displayValue: number | null | undefined = modeUsd
+          ? stored === null || stored === undefined
+            ? stored
+            : (stored * 1_000_000) / (cotizacion as number)
+          : stored;
+
+        const handleChange = (next: number | undefined) => {
+          if (modeUsd && next !== undefined) {
+            // USD totales ingresado → a millones de pesos para guardar.
+            field.onChange((next * (cotizacion as number)) / 1_000_000);
+          } else {
+            field.onChange(next);
+          }
+        };
+
+        return (
+          <MoneyInputInner
+            value={displayValue}
+            onChange={handleChange}
+            onBlur={field.onBlur}
+            suffix={suffix}
+            {...rest}
+          />
+        );
+      }}
     />
   );
 }
