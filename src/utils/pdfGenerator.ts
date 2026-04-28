@@ -226,7 +226,7 @@ async function drawSeparatorPage(
 
     for (const item of group.items) {
       const missing = !item.blob;
-      const text = `• ${item.meta.name}${missing ? '  (archivo no disponible)' : ''}`;
+      const text = `- ${item.meta.name}${missing ? '  (archivo no disponible)' : ''}`;
       page.drawText(toAnsi(text), {
         x: MARGIN_PT + 8,
         y,

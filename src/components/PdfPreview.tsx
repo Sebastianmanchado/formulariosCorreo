@@ -102,6 +102,11 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
       content: <CaratulaPage1 values={values} />,
     });
     list.push({
+      key: 'caratula-1b',
+      orientation: 'portrait',
+      content: <CaratulaPage1b values={values} />,
+    });
+    list.push({
       key: 'caratula-2',
       orientation: 'portrait',
       content: <CaratulaPage2 values={values} totales={totalesCaratula} />,
@@ -252,6 +257,7 @@ function ResumenEjecutivoPage({
 }) {
   const c = values.caratula;
   const nombre = c?.descripcion?.denominacion?.trim() || '(sin denominar)';
+  const isUsd = c?.monedaEntrada === 'usd';
   return (
     <>
       <div
@@ -287,101 +293,167 @@ function ResumenEjecutivoPage({
         </div>
       </div>
 
-      <div
-        style={{
-          marginBottom: '3mm',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '3mm',
-          fontSize: '10pt',
-        }}
-      >
-        <span
+      {isUsd && (
+        <div
           style={{
-            fontWeight: 600,
-            color: '#6b6158',
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            fontSize: '8.5pt',
+            marginBottom: '3mm',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '3mm',
+            fontSize: '10pt',
           }}
         >
-          Cotización USD:
-        </span>
-        <span
-          style={{
-            fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
-            fontWeight: 700,
-            color: '#1a3a5c',
-          }}
-        >
-          {formatMoneyZero(c?.cotizacionUsd)}
-        </span>
-        <span style={{ fontSize: '8.5pt', color: '#6b6158' }}>pesos / USD</span>
-      </div>
+          <span
+            style={{
+              fontWeight: 600,
+              color: '#6b6158',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px',
+              fontSize: '8.5pt',
+            }}
+          >
+            Cotización USD:
+          </span>
+          <span
+            style={{
+              fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+              fontWeight: 700,
+              color: '#1a3a5c',
+            }}
+          >
+            {formatMoneyZero(c?.cotizacionUsd)}
+          </span>
+          <span style={{ fontSize: '8.5pt', color: '#6b6158' }}>pesos / USD</span>
+        </div>
+      )}
 
-      <SectionTitle>Resumen de Montos Involucrados — USD</SectionTitle>
-      <table style={tableBase}>
-        <thead>
-          <tr>
-            <ThUsd align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
-            </ThUsd>
-            <ThUsd>Ej. actual</ThUsd>
-            <ThUsd>Siguientes</ThUsd>
-            <ThUsd>Total</ThUsd>
-            <ThUsd>Presupuesto</ThUsd>
-          </tr>
-        </thead>
-        <tbody>
-          <ResumenRowUsd
-            label="Ingresos / Ahorros incrementales del proyecto"
-            fila={c?.resumenMontos?.ingresosAhorros}
-            total={totales.resumen.ingresosAhorrosTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Egresos activables (hard, soft, bienes de uso)"
-            fila={c?.resumenMontos?.egresosActivables}
-            total={totales.resumen.egresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Otros egresos activables"
-            fila={c?.resumenMontos?.otrosEgresosActivables}
-            total={totales.resumen.otrosEgresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Gastos adic. no activables"
-            fila={c?.resumenMontos?.gastosNoActivables}
-            total={totales.resumen.gastosNoActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <tr>
-            <Td style={tdTotalCaratula}>
-              Monto total de la erogación (activable + no activable)
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
-            </Td>
-          </tr>
-          <ResumenRowUsd
-            label="Gastos incrementales corrientes"
-            fila={c?.resumenMontos?.gastosIncrementales}
-            total={totales.resumen.gastosIncrementalesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-        </tbody>
-      </table>
+      <SectionTitle>
+        {isUsd
+          ? 'Resumen de Montos Involucrados — USD'
+          : 'Resumen de Montos Involucrados'}
+      </SectionTitle>
+      {isUsd ? (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <ThUsd align="left" width="38%">
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
+              </ThUsd>
+              <ThUsd>Ej. actual</ThUsd>
+              <ThUsd>Siguientes</ThUsd>
+              <ThUsd>Total</ThUsd>
+              <ThUsd>Presupuesto</ThUsd>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRowUsd
+              label="Ingresos / Ahorros incrementales del proyecto"
+              fila={c?.resumenMontos?.ingresosAhorros}
+              total={totales.resumen.ingresosAhorrosTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Egresos activables (hard, soft, bienes de uso)"
+              fila={c?.resumenMontos?.egresosActivables}
+              total={totales.resumen.egresosActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Otros egresos activables"
+              fila={c?.resumenMontos?.otrosEgresosActivables}
+              total={totales.resumen.otrosEgresosActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Gastos adic. no activables"
+              fila={c?.resumenMontos?.gastosNoActivables}
+              total={totales.resumen.gastosNoActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <tr>
+              <Td style={tdTotalCaratula}>
+                Monto total de la erogación (activable + no activable)
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
+              </Td>
+            </tr>
+            <ResumenRowUsd
+              label="Gastos incrementales corrientes"
+              fila={c?.resumenMontos?.gastosIncrementales}
+              total={totales.resumen.gastosIncrementalesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+          </tbody>
+        </table>
+      ) : (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <Th align="left" width="38%">
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
+              </Th>
+              <Th>Ej. actual</Th>
+              <Th>Siguientes</Th>
+              <Th>Total</Th>
+              <Th>Presupuesto</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRow
+              label="Ingresos / Ahorros incrementales del proyecto"
+              fila={c?.resumenMontos?.ingresosAhorros}
+              total={totales.resumen.ingresosAhorrosTotal}
+            />
+            <ResumenRow
+              label="Egresos activables (hard, soft, bienes de uso)"
+              fila={c?.resumenMontos?.egresosActivables}
+              total={totales.resumen.egresosActivablesTotal}
+            />
+            <ResumenRow
+              label="Otros egresos activables"
+              fila={c?.resumenMontos?.otrosEgresosActivables}
+              total={totales.resumen.otrosEgresosActivablesTotal}
+            />
+            <ResumenRow
+              label="Gastos adic. no activables"
+              fila={c?.resumenMontos?.gastosNoActivables}
+              total={totales.resumen.gastosNoActivablesTotal}
+            />
+            <tr>
+              <Td style={tdTotalCaratula}>
+                Monto total de la erogación (activable + no activable)
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalEjActual)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalTotal)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalPrevisto)}
+              </Td>
+            </tr>
+            <ResumenRow
+              label="Gastos incrementales corrientes"
+              fila={c?.resumenMontos?.gastosIncrementales}
+              total={totales.resumen.gastosIncrementalesTotal}
+            />
+          </tbody>
+        </table>
+      )}
 
       <SectionTitle>Observaciones</SectionTitle>
       <div
@@ -534,6 +606,18 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
           <Paragraph text={c?.descripcion?.descripcion} />
           <AnexoFlag on={c?.descripcion?.descripcionIncluyeAnexo} />
         </KVBlock>
+      </KV>
+    </>
+  );
+}
+
+function CaratulaPage1b({ values }: { values: Proyecto }) {
+  const c = values.caratula;
+  return (
+    <>
+      <PageHeadingRow tag="①" title="Carátula (cont.)" />
+      <SectionTitle>A. Descripción General (cont.)</SectionTitle>
+      <KV>
         <KVBlock label="Objetivos y justificación">
           <Paragraph text={c?.descripcion?.objetivos} />
           <AnexoFlag on={c?.descripcion?.objetivosIncluyeAnexo} />
@@ -1463,7 +1547,7 @@ function Header({ n, total }: { n: number; total: number }) {
             letterSpacing: '0.5px',
           }}
         >
-          AD-OO-0136/01-05 · Ene. 22
+          AD-OO-0136/01-05
         </div>
         <div
           style={{

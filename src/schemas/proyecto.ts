@@ -40,7 +40,7 @@ const encabezadoSchema = z.object({
 });
 
 /** Máximo de caracteres para Descripción y Objetivos de la Carátula. */
-export const DESCRIPCION_MAX = 2000;
+export const DESCRIPCION_MAX = 3000;
 
 const longTextCappedField = z
   .string()
