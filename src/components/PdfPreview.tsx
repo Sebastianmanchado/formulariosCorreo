@@ -46,10 +46,13 @@ type Props = {
  * orientación se pasa en `data-pdf-orientation` y el generador la lee.
  *
  * Estructura del PDF:
- *   1. Resumen ejecutivo (1-2 páginas): nombre del proyecto + tablas pesos/USD
- *      + opiniones + firmas en blanco.
- *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos,
- *      Autorizaciones.
+ *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
+ *        · pg 1: nombre del proyecto + cotización + tabla USD + observaciones
+ *          (Dir. Planeamiento / Subdir. Innovación / Áreas de apoyo).
+ *        · pg 2: autorizaciones — 7 firmas de los Aprobadores de APEM.
+ *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
+ *      (Las firmas NO se repiten al final del reporte: viven sólo en el
+ *       Resumen Ejecutivo.)
  */
 export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   { values },
@@ -76,28 +79,32 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   const pages = useMemo<PageDef[]>(() => {
     const list: PageDef[] = [];
 
-    // ─── Resumen ejecutivo (al principio del PDF) ─────────────────────────
+    // ─── Resumen ejecutivo (primeras páginas del PDF, 2 carillas) ─────────
+    // Pensado para imprimirse a doble faz: página 1 = tablas + observaciones,
+    // página 2 = autorizaciones (las 7 firmas de los aprobadores de APEM).
     list.push({
-      key: 'resumen-exec-1',
+      key: 'resumen-exec',
       orientation: 'portrait',
       content: (
-        <ResumenEjecutivoPage1
-          values={values}
-          totales={totalesCaratula}
-        />
+        <ResumenEjecutivoPage values={values} totales={totalesCaratula} />
       ),
     });
     list.push({
-      key: 'resumen-exec-2',
+      key: 'resumen-exec-autorizaciones',
       orientation: 'portrait',
-      content: <ResumenEjecutivoPage2 values={values} />,
+      content: <ResumenEjecutivoAutorizacionesPage />,
     });
 
     // ─── Reporte completo ─────────────────────────────────────────────────
     list.push({
       key: 'caratula-1',
       orientation: 'portrait',
-      content: <CaratulaPage1 values={values} totales={totalesCaratula} />,
+      content: <CaratulaPage1 values={values} />,
+    });
+    list.push({
+      key: 'caratula-1b',
+      orientation: 'portrait',
+      content: <CaratulaPage1b values={values} />,
     });
     list.push({
       key: 'caratula-2',
@@ -107,69 +114,108 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     list.push({
       key: 'caratula-3',
       orientation: 'portrait',
-      content: <CaratulaPage3 values={values} />,
+      content: <CaratulaPage3 values={values} totales={totalesCaratula} />,
     });
 
     list.push({
-      key: 'detalle',
+      key: 'detalle-a',
       orientation: 'landscape',
-      content: <DetalleMensualPage values={values} totales={totalesDetalle} />,
+      content: (
+        <DetalleMensualPageA values={values} totales={totalesDetalle} />
+      ),
+    });
+    list.push({
+      key: 'detalle-b',
+      orientation: 'landscape',
+      content: (
+        <DetalleMensualPageB values={values} totales={totalesDetalle} />
+      ),
     });
 
-    const anxOrder: Array<{ key: AnexoSectionKey; title: string }> = [
-      { key: 'hardware', title: 'a1.1 — Detalle de Hardware' },
-      { key: 'software', title: 'a1.2 — Detalle de Software / Licencias' },
-      { key: 'desarrollosExternos', title: 'a1.3 — Desarrollos Externos' },
-      { key: 'otrosTecnologicos', title: 'a1.4 — Otros Egresos Tecnológicos' },
-      { key: 'bienesUso', title: 'a2 — Egresos en Bienes de Uso (no tecnológicos)' },
-      { key: 'obras', title: 'a3 — Egresos en Obras en Edificios Propios' },
-    ];
+    const proyectoNombre =
+      values.caratula?.descripcion?.denominacion?.trim() || undefined;
+    const cotizacionRef = values.caratula?.cotizacionUsd;
 
-    for (const { key, title } of anxOrder) {
-      const filas = values.anexosActivos?.[key]?.filas ?? [];
-      if (filas.length === 0) continue;
+    const anxMeta: Record<AnexoSectionKey, string> = {
+      hardware: 'a1.1 — Detalle de Hardware',
+      software: 'a1.2 — Detalle de Software / Licencias',
+      desarrollosExternos: 'a1.3 — Desarrollos Externos',
+      otrosTecnologicos: 'a1.4 — Otros Egresos Tecnológicos',
+      bienesUso: 'a2 — Egresos en Bienes de Uso (no tecnológicos)',
+      obras: 'a3 — Egresos en Obras en Edificios Propios',
+    };
+
+    const renderBlock = (key: AnexoSectionKey) => (
+      <AnexoSubsectionBlock
+        key={key}
+        title={anxMeta[key]}
+        filas={values.anexosActivos?.[key]?.filas ?? []}
+        rowTotals={totalesAnexos.sections[key].rowTotals}
+        colTotals={totalesAnexos.sections[key].colTotals}
+        cotizacion={cotizacionRef}
+      />
+    );
+
+    const hasRows = (key: AnexoSectionKey) =>
+      (values.anexosActivos?.[key]?.filas ?? []).length > 0;
+
+    // Página 1 — a1.1 + a1.2
+    if (hasRows('hardware') || hasRows('software')) {
       list.push({
-        key: `anexos-${key}`,
+        key: 'anexos-grp-1',
         orientation: 'landscape',
         content: (
-          <AnexoSubsectionPage
-            title={title}
-            proyecto={values.anexosActivos?.proyecto}
-            filas={filas}
-            rowTotals={totalesAnexos.sections[key].rowTotals}
-            colTotals={totalesAnexos.sections[key].colTotals}
-          />
+          <AnexosGroupPage proyecto={proyectoNombre}>
+            {renderBlock('hardware')}
+            {renderBlock('software')}
+          </AnexosGroupPage>
         ),
       });
     }
 
+    // Página 2 — a1.3 + a1.4 + Total Tecnológicos
     const techKeys: AnexoSectionKey[] = [
       'hardware',
       'software',
       'desarrollosExternos',
       'otrosTecnologicos',
     ];
-    const hasAnyTech = techKeys.some(
-      (k) => (values.anexosActivos?.[k]?.filas ?? []).length > 0
-    );
-    if (hasAnyTech) {
+    const hasAnyTech = techKeys.some(hasRows);
+    if (hasRows('desarrollosExternos') || hasRows('otrosTecnologicos') || hasAnyTech) {
       list.push({
-        key: 'anexos-tecnologicos',
+        key: 'anexos-grp-2',
         orientation: 'landscape',
         content: (
-          <AnexosTecnologicosPage
-            proyecto={values.anexosActivos?.proyecto}
-            col={totalesAnexos.totalTecnologicos}
-          />
+          <AnexosGroupPage proyecto={proyectoNombre}>
+            {renderBlock('desarrollosExternos')}
+            {renderBlock('otrosTecnologicos')}
+            {hasAnyTech && (
+              <AnexosTecnologicosBlock
+                col={totalesAnexos.totalTecnologicos}
+                cotizacion={cotizacionRef}
+              />
+            )}
+          </AnexosGroupPage>
         ),
       });
     }
 
-    list.push({
-      key: 'autorizaciones',
-      orientation: 'portrait',
-      content: <AutorizacionesPage />,
-    });
+    // Página 3 — a2 + a3 (Egresos en Bienes de Uso y Obras)
+    if (hasRows('bienesUso') || hasRows('obras')) {
+      list.push({
+        key: 'anexos-grp-3',
+        orientation: 'landscape',
+        content: (
+          <AnexosGroupPage proyecto={proyectoNombre}>
+            {renderBlock('bienesUso')}
+            {renderBlock('obras')}
+          </AnexosGroupPage>
+        ),
+      });
+    }
+
+    // Las autorizaciones al final del PDF fueron eliminadas a propósito:
+    // las firmas viven únicamente en el Resumen Ejecutivo (página 2).
 
     return list;
   }, [values, totalesCaratula, totalesDetalle, totalesAnexos]);
@@ -202,7 +248,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
 // Resumen Ejecutivo (páginas al principio del PDF)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function ResumenEjecutivoPage1({
+function ResumenEjecutivoPage({
   values,
   totales,
 }: {
@@ -211,12 +257,13 @@ function ResumenEjecutivoPage1({
 }) {
   const c = values.caratula;
   const nombre = c?.descripcion?.denominacion?.trim() || '(sin denominar)';
+  const isUsd = c?.monedaEntrada === 'usd';
   return (
     <>
       <div
         style={{
           marginTop: '3mm',
-          marginBottom: '6mm',
+          marginBottom: '5mm',
           padding: '4mm 5mm',
           background: '#1a3a5c',
           color: '#ffffff',
@@ -232,7 +279,7 @@ function ResumenEjecutivoPage1({
             textTransform: 'uppercase',
           }}
         >
-          Resumen ejecutivo del proyecto
+          Resumen ejecutivo — denominación del proyecto
         </div>
         <div
           style={{
@@ -246,189 +293,169 @@ function ResumenEjecutivoPage1({
         </div>
       </div>
 
-      <SectionTitle>Resumen de Montos Involucrados — Pesos</SectionTitle>
-      <div
-        style={{
-          marginBottom: '2.5mm',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '3mm',
-          fontSize: '9pt',
-        }}
-      >
-        <span
+      {isUsd && (
+        <div
           style={{
-            fontWeight: 600,
-            color: '#6b6158',
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            fontSize: '8pt',
+            marginBottom: '3mm',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '3mm',
+            fontSize: '10pt',
           }}
         >
-          Cotización USD:
-        </span>
-        <span
-          style={{
-            fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
-            fontWeight: 600,
-            color: '#1a3a5c',
-          }}
-        >
-          {formatMoneyZero(c?.cotizacionUsd)}
-        </span>
-        <span style={{ fontSize: '8pt', color: '#6b6158' }}>pesos / USD</span>
-      </div>
-      <Note>Importes en miles de pesos (m$).</Note>
-      <table style={tableBase}>
-        <thead>
-          <tr>
-            <Th align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(pesos)</span>
-            </Th>
-            <Th>Ej. actual</Th>
-            <Th>Siguientes</Th>
-            <Th>Total</Th>
-            <Th>Presupuesto</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <ResumenRow
-            label="Ingresos / Ahorros incrementales del proyecto"
-            fila={c?.resumenMontos?.ingresosAhorros}
-            total={totales.resumen.ingresosAhorrosTotal}
-          />
-          <ResumenRow
-            label="Egresos activables (hard, soft, bienes de uso)"
-            fila={c?.resumenMontos?.egresosActivables}
-            total={totales.resumen.egresosActivablesTotal}
-          />
-          <ResumenRow
-            label="Otros egresos activables"
-            fila={c?.resumenMontos?.otrosEgresosActivables}
-            total={totales.resumen.otrosEgresosActivablesTotal}
-          />
-          <ResumenRow
-            label="Gastos adic. no activables"
-            fila={c?.resumenMontos?.gastosNoActivables}
-            total={totales.resumen.gastosNoActivablesTotal}
-          />
-          <tr>
-            <Td style={tdTotalCaratula}>
-              Monto total de la erogación (activable + no activable)
-            </Td>
-            <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
-            <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
-            <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
-            <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
-          </tr>
-          <ResumenRow
-            label="Gastos incrementales corrientes"
-            fila={c?.resumenMontos?.gastosIncrementales}
-            total={totales.resumen.gastosIncrementalesTotal}
-          />
-        </tbody>
-      </table>
+          <span
+            style={{
+              fontWeight: 600,
+              color: '#6b6158',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px',
+              fontSize: '8.5pt',
+            }}
+          >
+            Cotización USD:
+          </span>
+          <span
+            style={{
+              fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+              fontWeight: 700,
+              color: '#1a3a5c',
+            }}
+          >
+            {formatMoneyZero(c?.cotizacionUsd)}
+          </span>
+          <span style={{ fontSize: '8.5pt', color: '#6b6158' }}>pesos / USD</span>
+        </div>
+      )}
 
-      <SectionTitle>Resumen de Montos Involucrados — USD</SectionTitle>
-      <table style={tableBase}>
-        <thead>
-          <tr>
-            <ThUsd align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
-            </ThUsd>
-            <ThUsd>Ej. actual</ThUsd>
-            <ThUsd>Siguientes</ThUsd>
-            <ThUsd>Total</ThUsd>
-            <ThUsd>Presupuesto</ThUsd>
-          </tr>
-        </thead>
-        <tbody>
-          <ResumenRowUsd
-            label="Ingresos / Ahorros incrementales del proyecto"
-            fila={c?.resumenMontos?.ingresosAhorros}
-            total={totales.resumen.ingresosAhorrosTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Egresos activables (hard, soft, bienes de uso)"
-            fila={c?.resumenMontos?.egresosActivables}
-            total={totales.resumen.egresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Otros egresos activables"
-            fila={c?.resumenMontos?.otrosEgresosActivables}
-            total={totales.resumen.otrosEgresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Gastos adic. no activables"
-            fila={c?.resumenMontos?.gastosNoActivables}
-            total={totales.resumen.gastosNoActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <tr>
-            <Td style={tdTotalCaratula}>
-              Monto total de la erogación (activable + no activable)
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
-            </Td>
-          </tr>
-          <ResumenRowUsd
-            label="Gastos incrementales corrientes"
-            fila={c?.resumenMontos?.gastosIncrementales}
-            total={totales.resumen.gastosIncrementalesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-        </tbody>
-      </table>
-    </>
-  );
-}
+      <SectionTitle>
+        {isUsd
+          ? 'Resumen de Montos Involucrados — USD'
+          : 'Resumen de Montos Involucrados'}
+      </SectionTitle>
+      {isUsd ? (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <ThUsd align="left" width="38%">
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
+              </ThUsd>
+              <ThUsd>Ej. actual</ThUsd>
+              <ThUsd>Siguientes</ThUsd>
+              <ThUsd>Total</ThUsd>
+              <ThUsd>Presupuesto</ThUsd>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRowUsd
+              label="Ingresos / Ahorros incrementales del proyecto"
+              fila={c?.resumenMontos?.ingresosAhorros}
+              total={totales.resumen.ingresosAhorrosTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Egresos activables (hard, soft, bienes de uso)"
+              fila={c?.resumenMontos?.egresosActivables}
+              total={totales.resumen.egresosActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Otros egresos activables"
+              fila={c?.resumenMontos?.otrosEgresosActivables}
+              total={totales.resumen.otrosEgresosActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <ResumenRowUsd
+              label="Gastos adic. no activables"
+              fila={c?.resumenMontos?.gastosNoActivables}
+              total={totales.resumen.gastosNoActivablesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+            <tr>
+              <Td style={tdTotalCaratula}>
+                Monto total de la erogación (activable + no activable)
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
+              </Td>
+              <Td num strong>
+                {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
+              </Td>
+            </tr>
+            <ResumenRowUsd
+              label="Gastos incrementales corrientes"
+              fila={c?.resumenMontos?.gastosIncrementales}
+              total={totales.resumen.gastosIncrementalesTotal}
+              cotizacion={c?.cotizacionUsd}
+            />
+          </tbody>
+        </table>
+      ) : (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <Th align="left" width="38%">
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
+              </Th>
+              <Th>Ej. actual</Th>
+              <Th>Siguientes</Th>
+              <Th>Total</Th>
+              <Th>Presupuesto</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRow
+              label="Ingresos / Ahorros incrementales del proyecto"
+              fila={c?.resumenMontos?.ingresosAhorros}
+              total={totales.resumen.ingresosAhorrosTotal}
+            />
+            <ResumenRow
+              label="Egresos activables (hard, soft, bienes de uso)"
+              fila={c?.resumenMontos?.egresosActivables}
+              total={totales.resumen.egresosActivablesTotal}
+            />
+            <ResumenRow
+              label="Otros egresos activables"
+              fila={c?.resumenMontos?.otrosEgresosActivables}
+              total={totales.resumen.otrosEgresosActivablesTotal}
+            />
+            <ResumenRow
+              label="Gastos adic. no activables"
+              fila={c?.resumenMontos?.gastosNoActivables}
+              total={totales.resumen.gastosNoActivablesTotal}
+            />
+            <tr>
+              <Td style={tdTotalCaratula}>
+                Monto total de la erogación (activable + no activable)
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalEjActual)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalTotal)}
+              </Td>
+              <Td num strong>
+                {formatMoneyZero(totales.resumen.montoTotalPrevisto)}
+              </Td>
+            </tr>
+            <ResumenRow
+              label="Gastos incrementales corrientes"
+              fila={c?.resumenMontos?.gastosIncrementales}
+              total={totales.resumen.gastosIncrementalesTotal}
+            />
+          </tbody>
+        </table>
+      )}
 
-function ResumenEjecutivoPage2({ values }: { values: Proyecto }) {
-  const c = values.caratula;
-  return (
-    <>
-      <div
-        style={{
-          marginTop: '3mm',
-          marginBottom: '5mm',
-          fontSize: '11pt',
-          fontWeight: 600,
-          color: '#1a3a5c',
-          borderBottom: '2px solid #1a3a5c',
-          paddingBottom: '2mm',
-        }}
-      >
-        Resumen ejecutivo —{' '}
-        {c?.descripcion?.denominacion?.trim() || '(sin denominar)'}
-      </div>
-
-      <SectionTitle>Opiniones y Comentarios</SectionTitle>
-      <KV>
-        <KVBlock label="Planeamiento Estratégico y Control de Gestión">
-          <Paragraph text={c?.opiniones?.planeamiento} />
-        </KVBlock>
-        <KVBlock label="Administración y Finanzas">
-          <Paragraph text={c?.opiniones?.administracion} />
-        </KVBlock>
-        <KVBlock label="Áreas de Apoyo">
-          <Paragraph text={c?.opiniones?.areasApoyo} />
-        </KVBlock>
-      </KV>
-
-      <SectionTitle>Autorizaciones</SectionTitle>
+      <SectionTitle>Observaciones</SectionTitle>
       <div
         style={{
           fontSize: '8pt',
@@ -437,33 +464,93 @@ function ResumenEjecutivoPage2({ values }: { values: Proyecto }) {
           marginBottom: '3mm',
         }}
       >
-        Las firmas y fechas se completan a mano tras imprimir.
+        Las observaciones se completan a mano tras imprimir.
       </div>
-      <Grid cols="repeat(3, 1fr)" gap="4mm">
-        {AUTORIZACIONES.map((a) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4mm' }}>
+        {[
+          'Director de Planeamiento Estratégico de Negocios',
+          'Sub Director General de Innovación y Transformación Corporativa',
+          'Áreas de Apoyo',
+        ].map((label) => (
           <div
-            key={a.key}
+            key={label}
             style={{
               border: '1px solid #c8c0b4',
               borderRadius: '2px',
-              padding: '3mm',
+              padding: '3mm 4mm',
               background: '#ffffff',
-              minHeight: '34mm',
+              minHeight: '38mm',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             <div
               style={{
-                fontSize: '7pt',
+                fontSize: '8pt',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                color: '#1a3a5c',
+                letterSpacing: '0.3px',
+                borderBottom: '1px solid #e8e0d4',
+                paddingBottom: '1.5mm',
+                marginBottom: '2mm',
+              }}
+            >
+              {label}
+            </div>
+            <div style={{ flex: 1 }} />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Autorizaciones del Resumen Ejecutivo — se imprime en la segunda página
+ * (pensado para doble faz con la caratula principal). 7 firmas en grilla 2×4
+ * con la última celda vacía.
+ */
+function ResumenEjecutivoAutorizacionesPage() {
+  return (
+    <>
+      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
+      <div
+        style={{
+          fontSize: '9pt',
+          color: '#6b6158',
+          fontStyle: 'italic',
+          marginTop: '2mm',
+          marginBottom: '5mm',
+        }}
+      >
+        Las firmas y fechas se completan a mano tras imprimir el formulario.
+      </div>
+      <Grid cols="repeat(2, 1fr)" gap="5mm">
+        {AUTORIZACIONES.map((a) => (
+          <div
+            key={a.key}
+            style={{
+              border: '1px solid #c8c0b4',
+              borderRadius: '2px',
+              padding: '3mm 4mm',
+              background: '#ffffff',
+              minHeight: '52mm',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '8pt',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 color: '#1a3a5c',
                 letterSpacing: '0.3px',
                 borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '1.5mm',
-                marginBottom: '2mm',
-                minHeight: '8mm',
+                paddingBottom: '2mm',
+                marginBottom: '3mm',
+                minHeight: '9mm',
               }}
             >
               {a.label}
@@ -472,7 +559,7 @@ function ResumenEjecutivoPage2({ values }: { values: Proyecto }) {
             <div
               style={{
                 borderBottom: '1px solid #6b6158',
-                height: '10mm',
+                height: '18mm',
                 marginBottom: '2mm',
               }}
             />
@@ -495,13 +582,7 @@ function ResumenEjecutivoPage2({ values }: { values: Proyecto }) {
   );
 }
 
-function CaratulaPage1({
-  values,
-  totales,
-}: {
-  values: Proyecto;
-  totales: ReturnType<typeof computeTotales>;
-}) {
+function CaratulaPage1({ values }: { values: Proyecto }) {
   const c = values.caratula;
   return (
     <>
@@ -525,6 +606,18 @@ function CaratulaPage1({
           <Paragraph text={c?.descripcion?.descripcion} />
           <AnexoFlag on={c?.descripcion?.descripcionIncluyeAnexo} />
         </KVBlock>
+      </KV>
+    </>
+  );
+}
+
+function CaratulaPage1b({ values }: { values: Proyecto }) {
+  const c = values.caratula;
+  return (
+    <>
+      <PageHeadingRow tag="①" title="Carátula (cont.)" />
+      <SectionTitle>A. Descripción General (cont.)</SectionTitle>
+      <KV>
         <KVBlock label="Objetivos y justificación">
           <Paragraph text={c?.descripcion?.objetivos} />
           <AnexoFlag on={c?.descripcion?.objetivosIncluyeAnexo} />
@@ -538,7 +631,21 @@ function CaratulaPage1({
           value={labelForModalidad(c?.descripcion?.modalidadEvaluacion) || '—'}
         />
       </KV>
+    </>
+  );
+}
 
+function CaratulaPage2({
+  values,
+  totales,
+}: {
+  values: Proyecto;
+  totales: ReturnType<typeof computeTotales>;
+}) {
+  const c = values.caratula;
+  return (
+    <>
+      <PageHeadingRow tag="①" title="Carátula" />
       <SectionTitle>Características Básicas</SectionTitle>
       <Grid cols="repeat(3, 1fr)">
         <MiniField
@@ -587,12 +694,12 @@ function CaratulaPage1({
         </span>
         <span style={{ fontSize: '8pt', color: '#6b6158' }}>pesos / USD</span>
       </div>
-      <Note>Importes en miles de pesos (m$).</Note>
+      <Note>Importes en millones de pesos.</Note>
       <table style={tableBase}>
         <thead>
           <tr>
             <Th align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(pesos)</span>
+              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
             </Th>
             <Th>Ejercicio actual</Th>
             <Th>Siguientes</Th>
@@ -724,7 +831,7 @@ function CaratulaPage1({
   );
 }
 
-function CaratulaPage2({
+function CaratulaPage3({
   values,
   totales,
 }: {
@@ -735,14 +842,14 @@ function CaratulaPage2({
   return (
     <>
       <PageHeadingRow tag="①" title="Carátula" />
-      <SectionTitle>Detalle del Monto Total a Invertir (m$)</SectionTitle>
+      <SectionTitle>Detalle del Monto Total a Invertir (en moneda ingresada)</SectionTitle>
       <Grid cols="1fr 1fr">
         <Box title="Activable">
           <MoneyLine label="1. Hardware" v={c?.detalleInversion?.activable?.hardware} />
           <MoneyLine label="2. Software" v={c?.detalleInversion?.activable?.software} />
           <MoneyLine label="3. Otros" v={c?.detalleInversion?.activable?.otros} />
           <MoneyLine
-            label="Total activable (pesos)"
+            label="Total activable (MM Pesos)"
             v={totales.detalle.totalActivable}
             total
           />
@@ -764,7 +871,7 @@ function CaratulaPage2({
             />
           ))}
           <MoneyLine
-            label="Total no activable (pesos)"
+            label="Total no activable (MM Pesos)"
             v={totales.detalle.totalNoActivable}
             total
           />
@@ -774,7 +881,7 @@ function CaratulaPage2({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total costo de la inversión (pesos)"
+            label="Total costo de la inversión (MM Pesos)"
             v={totales.detalle.totalInversion}
             emphasize
           />
@@ -798,7 +905,7 @@ function CaratulaPage2({
             />
           ))}
           <MoneyLine
-            label="Total gastos incrementales corrientes (pesos)"
+            label="Total gastos incrementales corrientes (MM Pesos)"
             v={totales.detalle.totalGastosIncrementales}
             total
           />
@@ -817,7 +924,7 @@ function CaratulaPage2({
           <MoneyLine label="2. Costos de instalación" v={c?.infoTI?.hardware?.instalacion} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.hardware?.otros} />
           <MoneyLine
-            label="Total costos Hardware (pesos)"
+            label="Total costos Hardware (MM Pesos)"
             v={totales.ti.totalHardware}
             total
           />
@@ -832,7 +939,7 @@ function CaratulaPage2({
           <MoneyLine label="2. Apoyo externo" v={c?.infoTI?.software?.apoyoExterno} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.software?.otros} />
           <MoneyLine
-            label="Total costos Software (pesos)"
+            label="Total costos Software (MM Pesos)"
             v={totales.ti.totalSoftware}
             total
           />
@@ -842,7 +949,7 @@ function CaratulaPage2({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total Hardware + Software (pesos)"
+            label="Total Hardware + Software (MM Pesos)"
             v={totales.ti.totalHwSw}
             emphasize
           />
@@ -870,105 +977,13 @@ function CaratulaPage2({
           value={formatPercent(c?.evaluacion?.tasaCorte) || '—'}
         />
         <MiniField
-          label="Valor Actual Neto (VAN, m$)"
+          label="VAN, en MM Pesos o USD según moneda ingresada"
           value={formatMoneyZero(c?.evaluacion?.van)}
         />
         <MiniField
           label="Período de repago (meses)"
           value={c?.evaluacion?.periodoRepagoMeses?.toString() || '—'}
         />
-      </Grid>
-    </>
-  );
-}
-
-function CaratulaPage3({ values }: { values: Proyecto }) {
-  const c = values.caratula;
-  return (
-    <>
-      <PageHeadingRow tag="①" title="Carátula" />
-      <SectionTitle>Opiniones y Comentarios</SectionTitle>
-      <KV>
-        <KVBlock label="Planeamiento Estratégico y Control de Gestión">
-          <Paragraph text={c?.opiniones?.planeamiento} />
-        </KVBlock>
-        <KVBlock label="Administración y Finanzas">
-          <Paragraph text={c?.opiniones?.administracion} />
-        </KVBlock>
-        <KVBlock label="Áreas de Apoyo">
-          <Paragraph text={c?.opiniones?.areasApoyo} />
-        </KVBlock>
-      </KV>
-    </>
-  );
-}
-
-function AutorizacionesPage() {
-  return (
-    <>
-      <PageHeadingRow tag="C." title="Autorizaciones" />
-      <div
-        style={{
-          fontSize: '9pt',
-          color: '#6b6158',
-          fontStyle: 'italic',
-          marginTop: '3mm',
-          marginBottom: '6mm',
-        }}
-      >
-        Las firmas y fechas se completan a mano tras imprimir el formulario.
-      </div>
-      <Grid cols="repeat(2, 1fr)" gap="8mm">
-        {AUTORIZACIONES.map((a) => (
-          <div
-            key={a.key}
-            style={{
-              border: '1px solid #c8c0b4',
-              borderRadius: '2px',
-              padding: '5mm',
-              background: '#ffffff',
-              minHeight: '55mm',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '8.5pt',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#1a3a5c',
-                letterSpacing: '0.4px',
-                borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '3mm',
-                marginBottom: '5mm',
-                minHeight: '10mm',
-              }}
-            >
-              {a.label}
-            </div>
-            <div style={{ flex: 1 }} />
-            <div
-              style={{
-                borderBottom: '1px solid #6b6158',
-                height: '20mm',
-                marginBottom: '3mm',
-              }}
-            />
-            <div
-              style={{
-                fontSize: '9pt',
-                color: '#6b6158',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '3mm',
-              }}
-            >
-              <span>Fecha:</span>
-              <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
-            </div>
-          </div>
-        ))}
       </Grid>
     </>
   );
@@ -983,7 +998,31 @@ const DETALLE_COL_WIDTH_CONCEPTO = '60mm';
 const DETALLE_COL_WIDTH_TOTAL = '20mm';
 const DETALLE_COLSPAN = 14;
 
-function DetalleMensualPage({
+/** Colgroup + thead reutilizados por las dos páginas de Detalle Mensual. */
+function DetalleTableHead() {
+  return (
+    <>
+      <colgroup>
+        <col style={{ width: DETALLE_COL_WIDTH_CONCEPTO }} />
+        {MESES_KEYS.map((m) => (
+          <col key={m} style={{ width: DETALLE_COL_WIDTH_MES }} />
+        ))}
+        <col style={{ width: DETALLE_COL_WIDTH_TOTAL }} />
+      </colgroup>
+      <thead>
+        <tr>
+          <ThSmall align="left">Concepto</ThSmall>
+          {MESES_KEYS.map((m) => (
+            <ThSmall key={m}>{MESES_LABELS[m]}</ThSmall>
+          ))}
+          <ThSmall highlight>Total año</ThSmall>
+        </tr>
+      </thead>
+    </>
+  );
+}
+
+function DetalleMensualPageA({
   values,
   totales,
 }: {
@@ -992,27 +1031,17 @@ function DetalleMensualPage({
 }) {
   const dm = values.detalleMensual;
   const inv = dm?.inversion;
+  const proyecto = values.caratula?.descripcion?.denominacion?.trim() || '—';
   return (
     <>
-      <PageHeadingRow tag="②" title={`Detalle Mensual — ${dm?.proyecto || '—'}`} />
-      <Note>Importes en miles de pesos (m$).</Note>
+      <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
+      <Note>
+        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        <strong>a) Detalle de la Inversión</strong> — el impacto económico se
+        muestra en la página siguiente.
+      </Note>
       <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
-        <colgroup>
-          <col style={{ width: DETALLE_COL_WIDTH_CONCEPTO }} />
-          {MESES_KEYS.map((m) => (
-            <col key={m} style={{ width: DETALLE_COL_WIDTH_MES }} />
-          ))}
-          <col style={{ width: DETALLE_COL_WIDTH_TOTAL }} />
-        </colgroup>
-        <thead>
-          <tr>
-            <ThSmall align="left">Concepto</ThSmall>
-            {MESES_KEYS.map((m) => (
-              <ThSmall key={m}>{MESES_LABELS[m]}</ThSmall>
-            ))}
-            <ThSmall highlight>Total año</ThSmall>
-          </tr>
-        </thead>
+        <DetalleTableHead />
         <tbody>
           <SectionBandRow label="a) Detalle de la Inversión" />
           <SubBandRow label="a.1) Egresos presumiblemente activables" />
@@ -1113,31 +1142,52 @@ function DetalleMensualPage({
             per={totales.totalInversion}
             strong
           />
+        </tbody>
+      </table>
+    </>
+  );
+}
 
+function DetalleMensualPageB({
+  values,
+  totales,
+}: {
+  values: Proyecto;
+  totales: DetalleTotales;
+}) {
+  const dm = values.detalleMensual;
+  const proyecto = values.caratula?.descripcion?.denominacion?.trim() || '—';
+  return (
+    <>
+      <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
+      <Note>
+        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        <strong>b) Impacto Económico de la Inversión</strong> — el detalle de
+        la inversión está en la página anterior.
+      </Note>
+      <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
+        <DetalleTableHead />
+        <tbody>
           <SectionBandRow label="b) Impacto Económico de la Inversión" />
-          <SubBandRow label="b.1) Ingresos Incrementales (Venta)" />
           <DataBandRow
-            label={labelOr(dm?.impacto?.ingresosIncrementales?.label, 'Detallar')}
+            number="b.1"
+            label="Ingresos Incrementales (Venta)"
             meses={dm?.impacto?.ingresosIncrementales?.meses}
             total={totales.rowTotals.ingresosIncrementales}
           />
-
-          <SubBandRow label="b.2) Ahorro en Gastos Corrientes" />
           <DataBandRow
-            label={labelOr(dm?.impacto?.ahorroGastos?.label, 'Detallar')}
+            number="b.2"
+            label="Ahorro en Gastos Corrientes"
             meses={dm?.impacto?.ahorroGastos?.meses}
             total={totales.rowTotals.ahorroGastos}
           />
-
           <MirrorBandRow label="b.3) Inversión no activable (= a.2)" per={totales.b3} />
-
-          <SubBandRow label="b.4) Gastos Corrientes que ocasionará el proyecto" />
           <DataBandRow
-            label={labelOr(dm?.impacto?.gastosCorrientes?.label, 'Detallar')}
+            number="b.4"
+            label="Gastos Corrientes que ocasionará el proyecto"
             meses={dm?.impacto?.gastosCorrientes?.meses}
             total={totales.rowTotals.gastosCorrientes}
           />
-
           <DataBandRow
             number="b.5"
             label="Amortización de la inversión activable"
@@ -1180,22 +1230,25 @@ const ANEXO_COLGROUP = (
   </colgroup>
 );
 
-function AnexoSubsectionPage({
+/**
+ * Bloque de sub-sección de anexos (banner + tabla). Sin PageHeadingRow ni
+ * Note — los agrupa el contenedor `AnexosGroupPage`.
+ */
+function AnexoSubsectionBlock({
   title,
-  proyecto,
   filas,
   rowTotals,
   colTotals,
+  cotizacion,
 }: {
   title: string;
-  proyecto: string | undefined;
   filas: FilaAnexo[];
   rowTotals: Record<string, { costoTotal: number; totalAnual: number }>;
   colTotals: AnexoColTotals;
+  cotizacion: number | null | undefined;
 }) {
   return (
     <>
-      <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
       <div
         style={{
           background: '#eae6e0',
@@ -1205,21 +1258,27 @@ function AnexoSubsectionPage({
           fontWeight: 600,
           textTransform: 'uppercase',
           color: '#1a3a5c',
-          marginBottom: '2mm',
+          marginBottom: '1.5mm',
           letterSpacing: '0.3px',
         }}
       >
         {title}
       </div>
-      <Note>Importes en miles de pesos (m$).</Note>
-      <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
+      <table
+        style={{
+          ...tableBase,
+          fontSize: '6.5pt',
+          tableLayout: 'fixed',
+          marginBottom: '3mm',
+        }}
+      >
         {ANEXO_COLGROUP}
         <thead>
           <tr>
             <ThSmall align="left">Concepto</ThSmall>
             <ThSmall>Cant.</ThSmall>
-            <ThSmall>Cto. unit. (m$)</ThSmall>
-            <ThSmall highlight>Costo Total (m$)</ThSmall>
+            <ThSmall>Cto. unit.</ThSmall>
+            <ThSmall highlight>Costo Total</ThSmall>
             {MESES_KEYS.map((m) => (
               <ThSmall key={m}>{MESES_LABELS[m]}</ThSmall>
             ))}
@@ -1229,6 +1288,22 @@ function AnexoSubsectionPage({
           </tr>
         </thead>
         <tbody>
+          {filas.length === 0 && (
+            <tr>
+              <td
+                colSpan={20}
+                style={{
+                  padding: '2mm',
+                  fontSize: '7pt',
+                  fontStyle: 'italic',
+                  color: '#b0a898',
+                  textAlign: 'center',
+                }}
+              >
+                Sin filas cargadas.
+              </td>
+            </tr>
+          )}
           {filas.map((f) => {
             const rt = rowTotals[f.id] ?? { costoTotal: 0, totalAnual: 0 };
             return (
@@ -1256,61 +1331,83 @@ function AnexoSubsectionPage({
               </tr>
             );
           })}
-          {/* Fila total */}
-          <tr>
-            <TdS strong>Total</TdS>
-            <TdS strong />
-            <TdS strong />
-            <TdS num strong>
-              {formatMoneyZero(colTotals.costoTotal)}
-            </TdS>
-            {MESES_KEYS.map((m) => (
-              <TdS key={m} num strong>
-                {formatMoneyZero(colTotals.meses[m])}
-              </TdS>
-            ))}
-            <TdS num strong>
-              {formatMoneyZero(colTotals.totalAnual)}
-            </TdS>
-            <TdS num strong>
-              {formatMoneyZero(colTotals.anioMas1)}
-            </TdS>
-            <TdS num strong>
-              {formatMoneyZero(colTotals.anioMas2)}
-            </TdS>
-          </tr>
+          {filas.length > 0 && (
+            <>
+              <tr>
+                <TdS strong>Total</TdS>
+                <TdS strong />
+                <TdS strong />
+                <TdS num strong>{formatMoneyZero(colTotals.costoTotal)}</TdS>
+                {MESES_KEYS.map((m) => (
+                  <TdS key={m} num strong>
+                    {formatMoneyZero(colTotals.meses[m])}
+                  </TdS>
+                ))}
+                <TdS num strong>{formatMoneyZero(colTotals.totalAnual)}</TdS>
+                <TdS num strong>{formatMoneyZero(colTotals.anioMas1)}</TdS>
+                <TdS num strong>{formatMoneyZero(colTotals.anioMas2)}</TdS>
+              </tr>
+              <tr>
+                <TdS strong highlight>Total (USD)</TdS>
+                <TdS highlight />
+                <TdS highlight />
+                <TdS num strong highlight>
+                  {formatUsdFromMiles(colTotals.costoTotal, cotizacion)}
+                </TdS>
+                {MESES_KEYS.map((m) => (
+                  <TdS key={m} num strong highlight>
+                    {formatUsdFromMiles(colTotals.meses[m], cotizacion)}
+                  </TdS>
+                ))}
+                <TdS num strong highlight>
+                  {formatUsdFromMiles(colTotals.totalAnual, cotizacion)}
+                </TdS>
+                <TdS num strong highlight>
+                  {formatUsdFromMiles(colTotals.anioMas1, cotizacion)}
+                </TdS>
+                <TdS num strong highlight>
+                  {formatUsdFromMiles(colTotals.anioMas2, cotizacion)}
+                </TdS>
+              </tr>
+            </>
+          )}
         </tbody>
       </table>
     </>
   );
 }
 
-function AnexosTecnologicosPage({
-  proyecto,
+function AnexosTecnologicosBlock({
   col,
+  cotizacion,
 }: {
-  proyecto: string | undefined;
   col: AnexoColTotals;
+  cotizacion: number | null | undefined;
 }) {
   return (
     <>
-      <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
       <div
         style={{
           background: '#1a3a5c',
           color: '#ffffff',
-          padding: '2mm 3mm',
-          fontSize: '9pt',
+          padding: '1.5mm 3mm',
+          fontSize: '8.5pt',
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.4px',
-          marginBottom: '3mm',
+          marginBottom: '1.5mm',
         }}
       >
         TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
       </div>
-      <Note>Importes en miles de pesos (m$).</Note>
-      <table style={{ ...tableBase, fontSize: '7pt', tableLayout: 'fixed' }}>
+      <table
+        style={{
+          ...tableBase,
+          fontSize: '7pt',
+          tableLayout: 'fixed',
+          marginBottom: '3mm',
+        }}
+      >
         {ANEXO_COLGROUP}
         <thead>
           <tr>
@@ -1341,8 +1438,50 @@ function AnexosTecnologicosPage({
             <TdS num strong>{formatMoneyZero(col.anioMas1)}</TdS>
             <TdS num strong>{formatMoneyZero(col.anioMas2)}</TdS>
           </tr>
+          <tr>
+            <TdS strong highlight>Total (USD)</TdS>
+            <TdS highlight />
+            <TdS highlight />
+            <TdS num strong highlight>
+              {formatUsdFromMiles(col.costoTotal, cotizacion)}
+            </TdS>
+            {MESES_KEYS.map((m) => (
+              <TdS key={m} num strong highlight>
+                {formatUsdFromMiles(col.meses[m], cotizacion)}
+              </TdS>
+            ))}
+            <TdS num strong highlight>
+              {formatUsdFromMiles(col.totalAnual, cotizacion)}
+            </TdS>
+            <TdS num strong highlight>
+              {formatUsdFromMiles(col.anioMas1, cotizacion)}
+            </TdS>
+            <TdS num strong highlight>
+              {formatUsdFromMiles(col.anioMas2, cotizacion)}
+            </TdS>
+          </tr>
         </tbody>
       </table>
+    </>
+  );
+}
+
+/**
+ * Página contenedora para varios bloques de Anexos. Encabezado + nota m$ +
+ * hijos apilados verticalmente.
+ */
+function AnexosGroupPage({
+  proyecto,
+  children,
+}: {
+  proyecto: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
+      <Note>Importes en MM Pesos o USD según moneda seleccionada.</Note>
+      {children}
     </>
   );
 }
@@ -1408,7 +1547,7 @@ function Header({ n, total }: { n: number; total: number }) {
             letterSpacing: '0.5px',
           }}
         >
-          AD-OO-0136/01-05 · Ene. 22
+          AD-OO-0136/01-05
         </div>
         <div
           style={{

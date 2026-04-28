@@ -5,11 +5,18 @@ import { proyectoSchema, type Proyecto } from '../schemas/proyecto';
 /**
  * Clave versionada del storage. Bumpeala si el schema cambia de forma
  * incompatible — así los borradores viejos se descartan automáticamente
- * en vez de romper la carga. Dejamos las keys anteriores aquí para migrar.
+ * en vez de romper la carga.
+ *
+ * v3: montos en millones de pesos (antes en miles). No se migran los v1/v2
+ *     porque los valores quedarían 1000× más grandes.
  */
-export const PROYECTO_STORAGE_KEY = 'ad-oo-0136:proyecto:v2';
+export const PROYECTO_STORAGE_KEY = 'ad-oo-0136:proyecto:v3';
 
-const LEGACY_STORAGE_KEYS: readonly string[] = ['ad-oo-0136:proyecto:v1'];
+/** Claves obsoletas que NO se migran — se borran al detectarlas. */
+const OBSOLETE_STORAGE_KEYS: readonly string[] = [
+  'ad-oo-0136:proyecto:v1',
+  'ad-oo-0136:proyecto:v2',
+];
 
 // ─── Primitivas de lectura/escritura ────────────────────────────────────────
 
@@ -26,28 +33,17 @@ function readAndParse(key: string): Proyecto | undefined {
 }
 
 export function loadProyectoFromStorage(): Proyecto | undefined {
-  // 1) intentar la versión actual
-  const current = readAndParse(PROYECTO_STORAGE_KEY);
-  if (current) return current;
-
-  // 2) migración best-effort desde versiones previas — el schema actual
-  //    tiene defaults para todos los sub-árboles nuevos, así que safeParse
-  //    de un borrador v1 succeed y rellena detalleMensual/anexosActivos
-  //    vacíos sin romper nada.
-  for (const legacyKey of LEGACY_STORAGE_KEYS) {
-    const migrated = readAndParse(legacyKey);
-    if (migrated) {
+  // Limpieza de borradores incompatibles de versiones anteriores (no se migran).
+  if (typeof window !== 'undefined') {
+    for (const k of OBSOLETE_STORAGE_KEYS) {
       try {
-        window.localStorage.setItem(PROYECTO_STORAGE_KEY, JSON.stringify(migrated));
-        window.localStorage.removeItem(legacyKey);
+        window.localStorage.removeItem(k);
       } catch {
-        // quota / modo privado — seguimos con el valor en memoria igual
+        // noop
       }
-      return migrated;
     }
   }
-
-  return undefined;
+  return readAndParse(PROYECTO_STORAGE_KEY);
 }
 
 export function saveProyectoToStorage(proyecto: Proyecto): boolean {
