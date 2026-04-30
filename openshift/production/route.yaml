@@ -5,7 +5,7 @@ metadata:
   labels:
     app: apemformularios
 spec:
-  host: apemformularios-apem-prod.apps.ocpbarr.correo.local
+  host: apemformularios-apem-prod.apps.ocpprod.correo.local
   to:
     kind: Service
     name: apemformularios
