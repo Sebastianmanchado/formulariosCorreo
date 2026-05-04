@@ -608,13 +608,13 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
       </KV>
 
       <SectionTitle>A. Descripción General</SectionTitle>
-      <KV>
+      <KV fill>
         <KVRow
           label="Denominación del proyecto"
           value={c?.descripcion?.denominacion || '—'}
           bold
         />
-        <KVBlock label="Descripción">
+        <KVBlock label="Descripción" fill>
           <Paragraph text={c?.descripcion?.descripcion} />
           <AnexoFlag on={c?.descripcion?.descripcionIncluyeAnexo} />
         </KVBlock>
@@ -629,8 +629,8 @@ function CaratulaPage1b({ values }: { values: Proyecto }) {
     <>
       <PageHeadingRow tag="①" title="Carátula (cont.)" />
       <SectionTitle>A. Descripción General (cont.)</SectionTitle>
-      <KV>
-        <KVBlock label="Objetivos y justificación">
+      <KV fill>
+        <KVBlock label="Objetivos y justificación" fill>
           <Paragraph text={c?.descripcion?.objetivos} />
           <AnexoFlag on={c?.descripcion?.objetivosIncluyeAnexo} />
         </KVBlock>
@@ -893,12 +893,12 @@ function CaratulaPage3({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total costo de la inversión (Millones de Pesos)"
+            label="Total costo de la erogación (Millones de Pesos)"
             v={totales.detalle.totalInversion}
             emphasize
           />
           <MoneyLineUsd
-            label="Total costo de la inversión (USD)"
+            label="Total costo de la erogación (USD)"
             v={totales.detalle.totalInversion}
             cotizacion={c?.cotizacionUsd}
             emphasize
@@ -1049,13 +1049,13 @@ function DetalleMensualPageA({
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
         Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
-        <strong>a) Detalle de la Inversión</strong> — el impacto económico se
+        <strong>a) Detalle de la Erogación</strong> — el impacto económico se
         muestra en la página siguiente.
       </Note>
       <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
         <DetalleTableHead />
         <tbody>
-          <SectionBandRow label="a) Detalle de la Inversión" />
+          <SectionBandRow label="a) Detalle de la Erogación" />
           <SubBandRow label="a.1) Egresos presumiblemente activables" />
           <GroupBandRow label="1. Egresos en Tecnología de Sistemas" />
           <DataBandRow
@@ -1150,7 +1150,7 @@ function DetalleMensualPageA({
 
           <TotalBandRow label="Total a.2" per={totales.totalA2} />
           <TotalBandRow
-            label="TOTAL DE LA INVERSIÓN (a.1 + a.2)"
+            label="TOTAL DE LA EROGACIÓN (a.1 + a.2)"
             per={totales.totalInversion}
             strong
           />
@@ -1174,13 +1174,13 @@ function DetalleMensualPageB({
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
         Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
-        <strong>b) Impacto Económico de la Inversión</strong> — el detalle de
-        la inversión está en la página anterior.
+        <strong>b) Impacto Económico de la Erogación</strong> — el detalle de
+        la erogación está en la página anterior.
       </Note>
       <table style={{ ...tableBase, fontSize: '6.5pt', tableLayout: 'fixed' }}>
         <DetalleTableHead />
         <tbody>
-          <SectionBandRow label="b) Impacto Económico de la Inversión" />
+          <SectionBandRow label="b) Impacto Económico de la Erogación" />
           <DataBandRow
             number="b.1"
             label="Ingresos Incrementales (Venta)"
@@ -1193,7 +1193,7 @@ function DetalleMensualPageB({
             meses={dm?.impacto?.ahorroGastos?.meses}
             total={totales.rowTotals.ahorroGastos}
           />
-          <MirrorBandRow label="b.3) Inversión no activable (= a.2)" per={totales.b3} />
+          <MirrorBandRow label="b.3) Erogación no activable (= a.2)" per={totales.b3} />
           <DataBandRow
             number="b.4"
             label="Gastos Corrientes que ocasionará el proyecto"
@@ -1202,7 +1202,7 @@ function DetalleMensualPageB({
           />
           <DataBandRow
             number="b.5"
-            label="Amortización de la inversión activable"
+            label="Amortización de la erogación activable"
             meses={dm?.impacto?.amortizacion?.meses}
             total={totales.rowTotals.amortizacion}
           />
@@ -1531,10 +1531,24 @@ function Page({
         background: '#ffffff',
         overflow: 'hidden',
         pageBreakAfter: 'always',
+        // Flex column para que cualquier hijo con `flex: 1` (típicamente un
+        // KVBlock con `fill`) se estire hasta el borde inferior de la página.
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <Header n={n} total={total} />
-      <div style={{ marginTop: '3mm' }}>{children}</div>
+      <div
+        style={{
+          marginTop: '3mm',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {children}
+      </div>
     </section>
   );
 }
@@ -1663,9 +1677,19 @@ function Grid({
   );
 }
 
-function KV({ children }: { children: ReactNode }) {
+function KV({ children, fill = false }: { children: ReactNode; fill?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5mm' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5mm',
+        // `fill` hace que el bloque consuma todo el espacio vertical sobrante
+        // del Page (que ya es flex column), para que un KVBlock interno con
+        // `fill` pueda crecer hasta el borde de la hoja.
+        ...(fill && { flex: 1, minHeight: 0 }),
+      }}
+    >
       {children}
     </div>
   );
@@ -1701,17 +1725,43 @@ function KVRow({
   );
 }
 
-function KVBlock({ label, children }: { label: string; children: ReactNode }) {
+function KVBlock({
+  label,
+  children,
+  fill = false,
+}: {
+  label: string;
+  children: ReactNode;
+  fill?: boolean;
+}) {
   return (
-    <div>
+    <div
+      style={{
+        border: '1px solid #c8c0b4',
+        borderRadius: '2px',
+        background: '#ffffff',
+        overflow: 'hidden',
+        // Cuando `fill` está activo, el recuadro se estira hasta consumir
+        // todo el espacio vertical disponible del KV padre (que a su vez
+        // está dentro de la hoja en flex column). Visualmente: la caja del
+        // texto ocupa toda la hoja salvo lo que dejen otros elementos.
+        ...(fill && {
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }),
+      }}
+    >
       <div
         style={{
           fontSize: '8pt',
-          fontWeight: 600,
-          color: '#6b6158',
+          fontWeight: 700,
+          color: '#ffffff',
+          background: '#1a3a5c',
           textTransform: 'uppercase',
           letterSpacing: '0.3px',
-          marginBottom: '1mm',
+          padding: '1.5mm 3mm',
         }}
       >
         {label}
@@ -1719,8 +1769,8 @@ function KVBlock({ label, children }: { label: string; children: ReactNode }) {
       <div
         style={{
           fontSize: '9pt',
-          borderLeft: '2px solid #c8c0b4',
-          paddingLeft: '3mm',
+          padding: '2.5mm 3mm',
+          ...(fill && { flex: 1, minHeight: 0 }),
         }}
       >
         {children}

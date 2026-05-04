@@ -641,7 +641,7 @@ function DetalleInversionSection() {
           />
 
           <TotalRow
-            label="Total costo de la inversión"
+            label="Total costo de la erogación"
             value={detalle.totalInversion}
             emphasis="strong"
             className="mt-3"

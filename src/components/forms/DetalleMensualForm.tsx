@@ -72,8 +72,8 @@ export function DetalleMensualForm() {
             </tr>
           </thead>
           <tbody>
-            {/* ═══ a) Detalle de la Inversión ═══ */}
-            <SectionRow label="a) Detalle de la Inversión" />
+            {/* ═══ a) Detalle de la Erogación ═══ */}
+            <SectionRow label="a) Detalle de la Erogación" />
 
             <SubSectionRow label="a.1) Egresos presumiblemente activables" />
 
@@ -185,7 +185,7 @@ export function DetalleMensualForm() {
 
             <TotalRow label="Total a.2" per={totales.totalA2} />
             <TotalRow
-              label="TOTAL DE LA INVERSIÓN (a.1 + a.2)"
+              label="TOTAL DE LA EROGACIÓN (a.1 + a.2)"
               per={totales.totalInversion}
               emphasis="strong"
             />
@@ -194,7 +194,7 @@ export function DetalleMensualForm() {
             <SpacerRow />
 
             {/* ═══ b) Impacto Económico ═══ */}
-            <SectionRow label="b) Impacto Económico de la Inversión" />
+            <SectionRow label="b) Impacto Económico de la Erogación" />
 
             <DataRow
               number="b.1"
@@ -210,7 +210,7 @@ export function DetalleMensualForm() {
               rowTotal={totales.rowTotals.ahorroGastos}
               gridRow={14}
             />
-            <MirrorRow label="b.3) Inversión no activable (= a.2)" per={totales.b3} />
+            <MirrorRow label="b.3) Erogación no activable (= a.2)" per={totales.b3} />
             <DataRow
               number="b.4"
               label="Gastos Corrientes que ocasionará el proyecto"
@@ -220,7 +220,7 @@ export function DetalleMensualForm() {
             />
             <DataRow
               number="b.5"
-              label="Amortización de la inversión activable"
+              label="Amortización de la erogación activable"
               basePath="detalleMensual.impacto.amortizacion"
               rowTotal={totales.rowTotals.amortizacion}
               gridRow={16}
