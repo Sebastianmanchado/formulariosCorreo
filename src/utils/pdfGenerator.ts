@@ -355,6 +355,10 @@ async function appendImagePage(
  * Sanitiza un string para que se pueda imprimir con Helvetica (Win-Ansi /
  * CP1252). Reemplaza los caracteres unicode más comunes por equivalentes
  * ASCII para no tirar `WinAnsi cannot encode` errors al hacer drawText.
+ *   • Normaliza a NFC primero — caracteres acentuados que vienen
+ *     descompuestos (ej. macOS / OneDrive → "a" + U+0301 para "á") se
+ *     componen a un único code point dentro del rango Win-Ansi. Sin esto,
+ *     las tildes salen como "?" en el PDF.
  *   • Smart quotes → '
  *   • em-dash / en-dash → -
  *   • elipsis … → ...
@@ -363,6 +367,9 @@ async function appendImagePage(
  */
 function toAnsi(s: string): string {
   if (!s) return s;
+  // NFC: "a" + U+0301 → "á" (U+00E1) — clave para nombres de archivo
+  // sincronizados desde macOS u otros sistemas que usan NFD.
+  const normalized = s.normalize('NFC');
   const replacements: Record<string, string> = {
     '\u2018': "'", // ‘
     '\u2019': "'", // ’
@@ -382,7 +389,7 @@ function toAnsi(s: string): string {
     '\uFEFF': '',
   };
   let out = '';
-  for (const ch of s) {
+  for (const ch of normalized) {
     const code = ch.charCodeAt(0);
     if (replacements[ch] !== undefined) {
       out += replacements[ch];
