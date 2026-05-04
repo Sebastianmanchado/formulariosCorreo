@@ -101,6 +101,22 @@ export function formatUsdFromMiles(
 }
 
 /**
+ * Igual que `formatUsdFromMiles` pero redondeado a USD enteros (sin decimales).
+ * Pensado para tablas de resumen donde no aporta el detalle de centavos.
+ */
+export function formatUsdFromMilesRounded(
+  amountInMillions: number | null | undefined,
+  cotizacionPesosPorUsd: number | null | undefined
+): string {
+  const v = toUsd(amountInMillions, cotizacionPesosPorUsd);
+  if (v === null) return '—';
+  return v.toLocaleString(AR_LOCALE, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
  * Suma tolerante: ignora undefined / null / NaN.
  */
 export function sum(...values: Array<number | null | undefined>): number {

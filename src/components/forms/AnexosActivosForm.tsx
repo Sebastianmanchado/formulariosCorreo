@@ -52,7 +52,7 @@ export function AnexosActivosForm() {
           </div>
         </div>
         <div className="pb-1 text-[11px] italic text-ink-muted">
-          Importes en MM Pesos o USD según moneda seleccionada
+          Importes en Millones de Pesos o USD según moneda seleccionada
         </div>
       </div>
 
@@ -253,7 +253,7 @@ function SubseccionTable({
                       inputClassName="h-[28px] rounded-none border-0 px-1 py-0 text-[10px] focus:ring-0"
                     />
                   </td>
-                  <td className="border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right font-mono text-[10px] font-semibold text-accent">
+                  <td className="break-all border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right align-top font-mono text-[10px] font-semibold text-accent">
                     {formatMoneyZero(costoTotal)}
                   </td>
                   {MESES_KEYS.map((m, mi) => (
@@ -272,7 +272,7 @@ function SubseccionTable({
                       />
                     </td>
                   ))}
-                  <td className="border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right font-mono text-[10px] font-semibold text-accent">
+                  <td className="break-all border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right align-top font-mono text-[10px] font-semibold text-accent">
                     {formatMoneyZero(totalAnual)}
                   </td>
                   <td className="border-b border-r border-border p-0">
@@ -359,9 +359,9 @@ function TotalRow({
   cotizacion: number | null | undefined;
 }) {
   const pesosCell =
-    'border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+    'break-all border-t-2 border-r border-border-strong bg-total px-1 py-1 text-right align-top font-mono text-[10px] font-bold text-accent';
   const usdCell =
-    'border-r border-accent/20 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+    'break-all border-r border-accent/20 bg-accent/10 px-1 py-1 text-right align-top font-mono text-[10px] font-bold text-accent';
   return (
     <>
       <tr>
@@ -418,9 +418,9 @@ function TotalAgregadoBox({
   cotizacion: number | null | undefined;
 }) {
   const cellBase =
-    'border-r border-accent/30 bg-accent/10 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+    'break-all border-r border-accent/30 bg-accent/10 px-1 py-1 text-right align-top font-mono text-[10px] font-bold text-accent';
   const cellBaseUsd =
-    'border-r border-accent/30 bg-accent/20 px-1 py-1 text-right font-mono text-[10px] font-bold text-accent';
+    'break-all border-r border-accent/30 bg-accent/20 px-1 py-1 text-right align-top font-mono text-[10px] font-bold text-accent';
   return (
     <div className="mb-5 overflow-x-auto rounded-sm border-2 border-accent">
       <div className="bg-accent px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-white">

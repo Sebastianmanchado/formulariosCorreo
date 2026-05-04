@@ -4,15 +4,11 @@ export interface Direccion {
 }
 
 export const ORGANIGRAMA: Direccion[] = [
-  { nombre: 'Dirección General', gerencias: [] },
-  { nombre: 'Dirección de Auditoría Interna', gerencias: [] },
-  { nombre: 'Unidad de Cumplimiento, Integridad y Transparencia', gerencias: [] },
   {
     nombre: 'Dirección Ejecutiva',
     gerencias: [
       'Gerencia de Planificación Ejecutiva',
       'Gerencia de Abastecimiento',
-      'Coordinación Ejecutiva',
       'Gerencia Región PBA / La Pampa / Metro',
       'Gerencia Región Centro / NEA',
       'Gerencia Región Cuyo / NOA',
@@ -86,9 +82,6 @@ export const ORGANIGRAMA: Direccion[] = [
       'Aplicaciones Tecnológicas',
       'Logística Electoral',
       'Asistencia Técnica Legal',
-      'Gerentes Regionales',
-      'Coordinadores Regional',
-      'Líderes de Proyecto',
     ],
   },
   {

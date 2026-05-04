@@ -410,19 +410,19 @@ function ResumenMontosSection() {
           <thead>
             <tr>
               <th className="w-[38%] border border-accent-light bg-accent px-2 py-1.5 text-left text-[11px] font-semibold text-white">
-                Concepto <span className="font-normal text-white/70">(MM Pesos)</span>
+                Concepto <span className="font-normal text-white/70">(Millones de Pesos)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicio actual (MM Pesos)
+                Ejercicio actual (Millones de Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicios siguientes (MM Pesos)
+                Ejercicios siguientes (Millones de Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Total (MM Pesos)
+                Total (Millones de Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Previsto en Presupuesto (MM Pesos)
+                Previsto en Presupuesto (Millones de Pesos)
               </th>
             </tr>
           </thead>
@@ -744,7 +744,7 @@ function EvaluacionEconomicaSection() {
           <Field label="Tasa de corte %" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.tasaCorte" />
           </Field>
-          <Field label="VAN, en MM Pesos o USD según moneda ingresada" orientation="column">
+          <Field label="VAN, en Millones de Pesos o USD según moneda ingresada" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.van" />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
@@ -878,7 +878,7 @@ function TotalRow({
     >
       <div className="grid grid-cols-[1fr_170px] items-center gap-3">
         <span className={`text-[12px] ${weight}`}>
-          {label} <span className="font-normal text-ink-muted">(MM Pesos)</span>
+          {label} <span className="font-normal text-ink-muted">(Millones de Pesos)</span>
         </span>
         <CalculatedField value={value} emphasis={emphasis} />
       </div>

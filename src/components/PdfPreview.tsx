@@ -26,6 +26,7 @@ import {
   formatMonth,
   formatPercent,
   formatUsdFromMiles,
+  formatUsdFromMilesRounded,
 } from '../utils/formatters';
 
 type Orientation = 'portrait' | 'landscape';
@@ -375,16 +376,16 @@ function ResumenEjecutivoPage({
                 Monto total de la erogación (activable + no activable)
               </Td>
               <Td num strong>
-                {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
+                {formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
+                {formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
+                {formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
+                {formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
               </Td>
             </tr>
             <ResumenRowUsd
@@ -400,7 +401,7 @@ function ResumenEjecutivoPage({
           <thead>
             <tr>
               <Th align="left" width="38%">
-                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(Millones de Pesos)</span>
               </Th>
               <Th>Ej. actual</Th>
               <Th>Siguientes</Th>
@@ -455,129 +456,140 @@ function ResumenEjecutivoPage({
         </table>
       )}
 
+      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
+      <Grid cols="repeat(3, 1fr)" gap="3mm">
+        {AUTORIZACIONES.slice(0, 6).map((a) => (
+          <FirmaBox key={a.key} label={a.label} />
+        ))}
+      </Grid>
+      <div style={{ marginTop: '3mm' }}>
+        <FirmaBox label="7. Directorio" />
+      </div>
+
       <SectionTitle>Observaciones</SectionTitle>
       <div
         style={{
-          fontSize: '8pt',
-          color: '#6b6158',
-          fontStyle: 'italic',
-          marginBottom: '3mm',
+          border: '1px solid #c8c0b4',
+          borderRadius: '2px',
+          padding: '3mm 4mm',
+          background: '#ffffff',
+          minHeight: '32mm',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        Las observaciones se completan a mano tras imprimir.
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4mm' }}>
-        {[
-          'Director de Planeamiento Estratégico de Negocios',
-          'Sub Director General de Innovación y Transformación Corporativa',
-          'Áreas de Apoyo',
-        ].map((label) => (
-          <div
-            key={label}
-            style={{
-              border: '1px solid #c8c0b4',
-              borderRadius: '2px',
-              padding: '3mm 4mm',
-              background: '#ffffff',
-              minHeight: '38mm',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '8pt',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#1a3a5c',
-                letterSpacing: '0.3px',
-                borderBottom: '1px solid #e8e0d4',
-                paddingBottom: '1.5mm',
-                marginBottom: '2mm',
-              }}
-            >
-              {label}
-            </div>
-            <div style={{ flex: 1 }} />
-          </div>
-        ))}
+        <div
+          style={{
+            fontSize: '8pt',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            color: '#1a3a5c',
+            letterSpacing: '0.3px',
+            borderBottom: '1px solid #e8e0d4',
+            paddingBottom: '1.5mm',
+            marginBottom: '2mm',
+          }}
+        >
+          Observaciones
+        </div>
+        <div style={{ flex: 1 }} />
       </div>
     </>
   );
 }
 
 /**
- * Autorizaciones del Resumen Ejecutivo — se imprime en la segunda página
- * (pensado para doble faz con la caratula principal). 7 firmas en grilla 2×4
- * con la última celda vacía.
+ * Caja de firma reutilizable: título arriba, espacio en blanco, línea para
+ * firma y campo de fecha.
+ */
+function FirmaBox({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        border: '1px solid #c8c0b4',
+        borderRadius: '2px',
+        padding: '3mm 4mm',
+        background: '#ffffff',
+        minHeight: '36mm',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '8pt',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          color: '#1a3a5c',
+          letterSpacing: '0.3px',
+          borderBottom: '1px solid #c8c0b4',
+          paddingBottom: '1.5mm',
+          marginBottom: '2mm',
+          minHeight: '8mm',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ flex: 1 }} />
+      <div
+        style={{
+          borderBottom: '1px solid #6b6158',
+          height: '12mm',
+          marginBottom: '1.5mm',
+        }}
+      />
+      <div
+        style={{
+          fontSize: '7.5pt',
+          color: '#6b6158',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '2mm',
+        }}
+      >
+        <span>Fecha:</span>
+        <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Segunda hoja del Resumen Ejecutivo — recuadro de observaciones extendido
+ * a lo ancho de la página y con altura ~1/3 a 1/2 de la carilla útil.
+ * Pensado para impresión doble faz con la primera hoja del Resumen.
  */
 function ResumenEjecutivoAutorizacionesPage() {
   return (
     <>
-      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
+      <SectionTitle>Observaciones</SectionTitle>
       <div
         style={{
-          fontSize: '9pt',
-          color: '#6b6158',
-          fontStyle: 'italic',
-          marginTop: '2mm',
-          marginBottom: '5mm',
+          border: '1px solid #c8c0b4',
+          borderRadius: '2px',
+          padding: '4mm 5mm',
+          background: '#ffffff',
+          minHeight: '120mm',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        Las firmas y fechas se completan a mano tras imprimir el formulario.
+        <div
+          style={{
+            fontSize: '9pt',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            color: '#1a3a5c',
+            letterSpacing: '0.3px',
+            borderBottom: '1px solid #e8e0d4',
+            paddingBottom: '2mm',
+            marginBottom: '3mm',
+          }}
+        >
+          Observaciones
+        </div>
+        <div style={{ flex: 1 }} />
       </div>
-      <Grid cols="repeat(2, 1fr)" gap="5mm">
-        {AUTORIZACIONES.map((a) => (
-          <div
-            key={a.key}
-            style={{
-              border: '1px solid #c8c0b4',
-              borderRadius: '2px',
-              padding: '3mm 4mm',
-              background: '#ffffff',
-              minHeight: '52mm',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '8pt',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                color: '#1a3a5c',
-                letterSpacing: '0.3px',
-                borderBottom: '1px solid #c8c0b4',
-                paddingBottom: '2mm',
-                marginBottom: '3mm',
-                minHeight: '9mm',
-              }}
-            >
-              {a.label}
-            </div>
-            <div style={{ flex: 1 }} />
-            <div
-              style={{
-                borderBottom: '1px solid #6b6158',
-                height: '18mm',
-                marginBottom: '2mm',
-              }}
-            />
-            <div
-              style={{
-                fontSize: '8pt',
-                color: '#6b6158',
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '2mm',
-              }}
-            >
-              <span>Fecha:</span>
-              <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
-            </div>
-          </div>
-        ))}
-      </Grid>
     </>
   );
 }
@@ -699,7 +711,7 @@ function CaratulaPage2({
         <thead>
           <tr>
             <Th align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(MM Pesos)</span>
+              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(Millones de Pesos)</span>
             </Th>
             <Th>Ejercicio actual</Th>
             <Th>Siguientes</Th>
@@ -807,16 +819,16 @@ function CaratulaPage2({
               Monto total de la erogación (activable + no activable)
             </Td>
             <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
+              {formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
             </Td>
             <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
+              {formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
             </Td>
             <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
+              {formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
             </Td>
             <Td num strong>
-              {formatUsdFromMiles(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
+              {formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
             </Td>
           </tr>
           <ResumenRowUsd
@@ -849,7 +861,7 @@ function CaratulaPage3({
           <MoneyLine label="2. Software" v={c?.detalleInversion?.activable?.software} />
           <MoneyLine label="3. Otros" v={c?.detalleInversion?.activable?.otros} />
           <MoneyLine
-            label="Total activable (MM Pesos)"
+            label="Total activable (Millones de Pesos)"
             v={totales.detalle.totalActivable}
             total
           />
@@ -871,7 +883,7 @@ function CaratulaPage3({
             />
           ))}
           <MoneyLine
-            label="Total no activable (MM Pesos)"
+            label="Total no activable (Millones de Pesos)"
             v={totales.detalle.totalNoActivable}
             total
           />
@@ -881,7 +893,7 @@ function CaratulaPage3({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total costo de la inversión (MM Pesos)"
+            label="Total costo de la inversión (Millones de Pesos)"
             v={totales.detalle.totalInversion}
             emphasize
           />
@@ -905,7 +917,7 @@ function CaratulaPage3({
             />
           ))}
           <MoneyLine
-            label="Total gastos incrementales corrientes (MM Pesos)"
+            label="Total gastos incrementales corrientes (Millones de Pesos)"
             v={totales.detalle.totalGastosIncrementales}
             total
           />
@@ -924,7 +936,7 @@ function CaratulaPage3({
           <MoneyLine label="2. Costos de instalación" v={c?.infoTI?.hardware?.instalacion} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.hardware?.otros} />
           <MoneyLine
-            label="Total costos Hardware (MM Pesos)"
+            label="Total costos Hardware (Millones de Pesos)"
             v={totales.ti.totalHardware}
             total
           />
@@ -939,7 +951,7 @@ function CaratulaPage3({
           <MoneyLine label="2. Apoyo externo" v={c?.infoTI?.software?.apoyoExterno} />
           <MoneyLine label="3. Otros costos" v={c?.infoTI?.software?.otros} />
           <MoneyLine
-            label="Total costos Software (MM Pesos)"
+            label="Total costos Software (Millones de Pesos)"
             v={totales.ti.totalSoftware}
             total
           />
@@ -949,7 +961,7 @@ function CaratulaPage3({
             cotizacion={c?.cotizacionUsd}
           />
           <MoneyLine
-            label="Total Hardware + Software (MM Pesos)"
+            label="Total Hardware + Software (Millones de Pesos)"
             v={totales.ti.totalHwSw}
             emphasize
           />
@@ -977,7 +989,7 @@ function CaratulaPage3({
           value={formatPercent(c?.evaluacion?.tasaCorte) || '—'}
         />
         <MiniField
-          label="VAN, en MM Pesos o USD según moneda ingresada"
+          label="VAN, en Millones de Pesos o USD según moneda ingresada"
           value={formatMoneyZero(c?.evaluacion?.van)}
         />
         <MiniField
@@ -1036,7 +1048,7 @@ function DetalleMensualPageA({
     <>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
         <strong>a) Detalle de la Inversión</strong> — el impacto económico se
         muestra en la página siguiente.
       </Note>
@@ -1161,7 +1173,7 @@ function DetalleMensualPageB({
     <>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en MM Pesos o USD según moneda seleccionada. Parte{' '}
+        Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
         <strong>b) Impacto Económico de la Inversión</strong> — el detalle de
         la inversión está en la página anterior.
       </Note>
@@ -1480,7 +1492,7 @@ function AnexosGroupPage({
   return (
     <>
       <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
-      <Note>Importes en MM Pesos o USD según moneda seleccionada.</Note>
+      <Note>Importes en Millones de Pesos o USD según moneda seleccionada.</Note>
       {children}
     </>
   );
@@ -2068,12 +2080,12 @@ function ResumenRowUsd({
       <Td style={{ background: '#faf8f5', fontSize: '7.5pt', fontWeight: 500 }}>
         {label}
       </Td>
-      <Td num style={usdStyle}>{formatUsdFromMiles(fila?.ejActual, cotizacion)}</Td>
-      <Td num style={usdStyle}>{formatUsdFromMiles(fila?.ejSiguientes, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.ejActual, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.ejSiguientes, cotizacion)}</Td>
       <Td num style={{ ...usdStyle, fontWeight: 700 }}>
-        {formatUsdFromMiles(total, cotizacion)}
+        {formatUsdFromMilesRounded(total, cotizacion)}
       </Td>
-      <Td num style={usdStyle}>{formatUsdFromMiles(fila?.previsto, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.previsto, cotizacion)}</Td>
     </tr>
   );
 }
@@ -2134,6 +2146,12 @@ function TdS({
             ? 'rgba(26,58,92,0.08)'
             : '#ffffff',
         color: highlight ? '#1a3a5c' : '#1c1814',
+        // Si el número (o el concepto) no entra a lo ancho, parte el contenido
+        // y crece la fila en alto en vez de cortar visualmente el valor.
+        wordBreak: num ? 'break-all' : 'break-word',
+        overflowWrap: 'anywhere',
+        whiteSpace: 'normal',
+        verticalAlign: 'top',
       }}
     >
       {children}

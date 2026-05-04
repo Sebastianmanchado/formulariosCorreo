@@ -41,7 +41,7 @@ export function DetalleMensualForm() {
           </div>
         </div>
         <div className="pb-1 text-[11px] italic text-ink-muted">
-          Importes en MM Pesos o USD según moneda seleccionada
+          Importes en Millones de Pesos o USD según moneda seleccionada
         </div>
       </div>
 
