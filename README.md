@@ -38,12 +38,22 @@ Solo tipea los archivos dentro de src/. Los archivos de configuración raíz los
 Configuración separada solo para vite.config.ts
 
 # Carpeta src 
+    app.tsx - Nucleo de la app 
+    main.tsx - Punto de entrada 
+    index.css - Estilos globales + Tailwind
 ## components 
-## data 
-## hooks 
-## schemas
-## utils
-## app.tsx - Componente raíz
-## index.css
-## main.tsx - Punto de entrada 
-## vite-env.d.ts - Tipos de Vite para TypeScript 
+    /forms 
+    CaratulaForm 
+    DetalleMensualForm
+    AnexosActivosForm
+    
+    Son cada una de las secciones del formulario 
+
+    /ui contiene componenetes reutilizables de UI 
+    /hooks contiene logica reutilizable
+    /schemas/proyecto.ts - Validación con Zod
+    utils/
+        formatters.ts -> Formateo de monedas
+        pdfGenerator -> Captura las secciones del DOM con  hrml2canvas, genera pdf con jsPdf y fusiona adjuntos con pdf-lib 
+    pdfPreview -> Componente que se rendirza fuera de pantalla durante la generacion del pdf, estrucutura el doc. En paginas, agrega algunas secciones al imprimible.
+    
