@@ -27,6 +27,7 @@ import {
   formatPercent,
   formatUsdFromMiles,
   formatUsdFromMilesRounded,
+  monthYearShort,
 } from '../utils/formatters';
 
 type Orientation = 'portrait' | 'landscape';
@@ -340,8 +341,8 @@ function ResumenEjecutivoPage({
               <ThUsd align="left" width="38%">
                 Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
               </ThUsd>
-              <ThUsd>Ej. actual</ThUsd>
-              <ThUsd>Siguientes</ThUsd>
+              <ThUsd>Año actual</ThUsd>
+              <ThUsd>Años siguientes</ThUsd>
               <ThUsd>Total</ThUsd>
               <ThUsd>Presupuesto</ThUsd>
             </tr>
@@ -403,8 +404,8 @@ function ResumenEjecutivoPage({
               <Th align="left" width="38%">
                 Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(Millones de Pesos)</span>
               </Th>
-              <Th>Ej. actual</Th>
-              <Th>Siguientes</Th>
+              <Th>Año actual</Th>
+              <Th>Años siguientes</Th>
               <Th>Total</Th>
               <Th>Presupuesto</Th>
             </tr>
@@ -713,8 +714,8 @@ function CaratulaPage2({
             <Th align="left" width="38%">
               Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(Millones de Pesos)</span>
             </Th>
-            <Th>Ejercicio actual</Th>
-            <Th>Siguientes</Th>
+            <Th>Año actual</Th>
+            <Th>Años siguientes</Th>
             <Th>Total</Th>
             <Th>Presupuesto</Th>
           </tr>
@@ -783,8 +784,8 @@ function CaratulaPage2({
             <ThUsd align="left" width="38%">
               Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
             </ThUsd>
-            <ThUsd>Ejercicio actual</ThUsd>
-            <ThUsd>Siguientes</ThUsd>
+            <ThUsd>Año actual</ThUsd>
+            <ThUsd>Años siguientes</ThUsd>
             <ThUsd>Total</ThUsd>
             <ThUsd>Presupuesto</ThUsd>
           </tr>
@@ -1573,7 +1574,7 @@ function Header({ n, total }: { n: number; total: number }) {
             letterSpacing: '0.5px',
           }}
         >
-          AD-OO-0136/01-05
+          AD-OO-0136/01-07 {monthYearShort()}
         </div>
         <div
           style={{

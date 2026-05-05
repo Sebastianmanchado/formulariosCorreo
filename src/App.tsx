@@ -19,6 +19,7 @@ import {
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
+import { monthYearShort } from './utils/formatters';
 
 type PdfState = { generating: false } | { generating: true; values: Proyecto };
 
@@ -247,7 +248,7 @@ function Topbar({
     <header className="flex items-center justify-between gap-4 bg-accent px-6 py-3 text-white">
       <div className="flex min-w-0 flex-col">
         <span className="font-mono text-[11px] tracking-wider opacity-70">
-          AD-OO-0136/01-05
+          AD-OO-0136/01-07 {monthYearShort()}
         </span>
         <span className="truncate text-[15px] font-semibold">
           Aprobación de Proyecto de Erogaciones Mayores

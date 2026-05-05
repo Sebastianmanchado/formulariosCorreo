@@ -172,6 +172,22 @@ export function formatMonth(ym: string | null | undefined): string {
   return `${MESES_ES[m] ?? match[2]} ${y}`;
 }
 
+const MESES_ES_SHORT = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+];
+
+/**
+ * Mes-año actual en formato corto: "May-26" (mes en español abreviado +
+ * año a 2 dígitos). Pensado para etiquetar la versión vigente del
+ * formulario al lado de su código (AD-OO-0136/01-07 May-26).
+ */
+export function monthYearShort(date: Date = new Date()): string {
+  const m = MESES_ES_SHORT[date.getMonth()] ?? '';
+  const y = String(date.getFullYear() % 100).padStart(2, '0');
+  return `${m}-${y}`;
+}
+
 /**
  * Fecha de hoy en ISO (YYYY-MM-DD), usando zona horaria local —
  * importante para que el `<input type="date">` y el tope `max` coincidan con

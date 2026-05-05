@@ -413,10 +413,10 @@ function ResumenMontosSection() {
                 Concepto <span className="font-normal text-white/70">(Millones de Pesos)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicio actual (Millones de Pesos)
+                Año actual (Millones de Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicios siguientes (Millones de Pesos)
+                Años siguientes (Millones de Pesos)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
                 Total (Millones de Pesos)
@@ -521,10 +521,10 @@ function ResumenMontosSection() {
                 Concepto <span className="font-normal text-white/70">(USD)</span>
               </th>
               <th className="border border-accent-light bg-accent-dark px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicio actual (USD)
+                Año actual (USD)
               </th>
               <th className="border border-accent-light bg-accent-dark px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Ejercicios siguientes (USD)
+                Años siguientes (USD)
               </th>
               <th className="border border-accent-light bg-accent-dark px-2 py-1.5 text-center text-[11px] font-semibold text-white">
                 Total (USD)
