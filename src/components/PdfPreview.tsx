@@ -1314,20 +1314,19 @@ function AnexoSubsectionBlock({
           background: '#eae6e0',
           borderLeft: '4px solid #1a3a5c',
           marginBottom: '1.5mm',
-          height: '7mm',
-          lineHeight: '7mm',
-          padding: '0 3mm',
+          padding: '1.5mm 3mm',
           fontSize: '8.5pt',
           fontWeight: 600,
           textTransform: 'uppercase',
           color: '#1a3a5c',
           letterSpacing: '0.3px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
+          lineHeight: 1.4,
           flexShrink: 0,
         }}
       >
         {title}
+        <br />
+        {' '}
       </div>
       <table
         style={{
@@ -1456,20 +1455,19 @@ function AnexosTecnologicosBlock({
           background: '#1a3a5c',
           borderRadius: '1px',
           marginBottom: '1.5mm',
-          height: '7mm',
-          lineHeight: '7mm',
-          padding: '0 3mm',
+          padding: '1.5mm 3mm',
           color: '#ffffff',
           fontSize: '8.5pt',
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.4px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
+          lineHeight: 1.4,
           flexShrink: 0,
         }}
       >
         TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
+        <br />
+        {' '}
       </div>
       <table
         style={{
@@ -1691,10 +1689,9 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  // Centrado vertical via line-height = height. Más confiable que flex o
-  // table-cell en html2canvas v1.4.1, que no respeta alignItems:center ni
-  // vertical-align:middle al rasterizar. flexShrink:0 evita que el page flex
-  // column padre apriete la barra y rompa el line-height = height.
+  // Pedido del usuario: título alineado a la izquierda + línea en blanco abajo
+  // dentro de la barra azul (en vez de intentar centrar verticalmente, que
+  // html2canvas no respeta). El <br/> + nbsp crea la 2da línea.
   return (
     <h2
       style={{
@@ -1702,21 +1699,19 @@ function SectionTitle({ children }: { children: ReactNode }) {
         borderRadius: '1px',
         marginTop: '4mm',
         marginBottom: '2.5mm',
-        height: '7mm',
-        lineHeight: '7mm',
-        padding: '0 3mm',
+        padding: '1.5mm 3mm',
         color: '#ffffff',
         fontSize: '9pt',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.4px',
-        textAlign: 'center',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
+        lineHeight: 1.4,
         flexShrink: 0,
       }}
     >
       {children}
+      <br />
+      {' '}
     </h2>
   );
 }
@@ -1834,20 +1829,19 @@ function KVBlock({
       <div
         style={{
           background: '#1a3a5c',
-          height: '6mm',
-          lineHeight: '6mm',
-          padding: '0 3mm',
+          padding: '1.5mm 3mm',
           color: '#ffffff',
           fontSize: '8pt',
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.3px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
+          lineHeight: 1.4,
           flexShrink: 0,
         }}
       >
         {label}
+        <br />
+        {' '}
       </div>
       <div
         style={{
