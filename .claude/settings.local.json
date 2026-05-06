@@ -14,7 +14,28 @@
       "Bash(rm test-vacio.mjs)",
       "Bash(npx tsx *)",
       "Bash(rm test-real.mjs)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//c/Users/sebas/OneDrive/Documentos/correoArg/.git/**)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" config --get commit.template)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" config --list --show-origin)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" show HEAD -- src/components/PdfPreview.tsx)",
+      "Bash(git config *)",
+      "Bash(grep -iE \"hook|template|commit\\\\\\\\.|alias\\\\\\\\.commit\")",
+      "Bash(git checkout *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(cp src/components/PdfPreview.tsx \"C:/Users/sebas/OneDrive/Documentos/correoArg/src/components/PdfPreview.tsx\")",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" diff --stat)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" status)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" log --oneline -3)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" diff src/components/PdfPreview.tsx)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git check-ignore *)",
+      "Bash(git stash *)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" status --short)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" add src/components/PdfPreview.tsx)",
+      "Bash(git -C C:/Users/sebas/OneDrive/Documentos/correoArg commit -m ' *)",
+      "Bash(git -C \"C:/Users/sebas/OneDrive/Documentos/correoArg\" log --oneline -- .claude/settings.local.json)"
     ]
   }
 }
