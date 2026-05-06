@@ -1313,16 +1313,27 @@ function AnexoSubsectionBlock({
         style={{
           background: '#eae6e0',
           borderLeft: '4px solid #1a3a5c',
-          padding: '1.5mm 3mm',
-          fontSize: '8.5pt',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          color: '#1a3a5c',
           marginBottom: '1.5mm',
-          letterSpacing: '0.3px',
+          display: 'table',
+          width: '100%',
+          minHeight: '7mm',
         }}
       >
-        {title}
+        <span
+          style={{
+            display: 'table-cell',
+            verticalAlign: 'middle',
+            padding: '1.5mm 3mm',
+            fontSize: '8.5pt',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            color: '#1a3a5c',
+            letterSpacing: '0.3px',
+            lineHeight: 1.2,
+          }}
+        >
+          {title}
+        </span>
       </div>
       <table
         style={{
@@ -1453,14 +1464,14 @@ function AnexosTecnologicosBlock({
           marginBottom: '1.5mm',
           display: 'table',
           width: '100%',
-          height: '7mm',
+          minHeight: '7mm',
         }}
       >
         <span
           style={{
             display: 'table-cell',
             verticalAlign: 'middle',
-            padding: '0 3mm',
+            padding: '1.5mm 3mm',
             color: '#ffffff',
             fontSize: '8.5pt',
             fontWeight: 700,
@@ -1693,14 +1704,14 @@ function SectionTitle({ children }: { children: ReactNode }) {
         padding: 0,
         display: 'table',
         width: '100%',
-        height: '7mm',
+        minHeight: '7mm',
       }}
     >
       <span
         style={{
           display: 'table-cell',
           verticalAlign: 'middle',
-          padding: '0 3mm',
+          padding: '1.5mm 3mm',
           color: '#ffffff',
           fontSize: '9pt',
           fontWeight: 600,
@@ -1830,14 +1841,14 @@ function KVBlock({
           background: '#1a3a5c',
           display: 'table',
           width: '100%',
-          height: '6mm',
+          minHeight: '6mm',
         }}
       >
         <span
           style={{
             display: 'table-cell',
             verticalAlign: 'middle',
-            padding: '0 3mm',
+            padding: '1.5mm 3mm',
             color: '#ffffff',
             fontSize: '8pt',
             fontWeight: 700,
