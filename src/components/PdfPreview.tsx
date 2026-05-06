@@ -1801,7 +1801,7 @@ function KVBlock({
       <div
         style={{
           background: '#1a3a5c',
-          padding: '1.5mm 3mm',
+          padding: '4mm 3mm',
           color: '#ffffff',
           fontSize: '8pt',
           fontWeight: 700,
@@ -1812,9 +1812,6 @@ function KVBlock({
         }}
       >
         {label}
-        <br />
-        <br />
-        {' '}
       </div>
       <div
         style={{
