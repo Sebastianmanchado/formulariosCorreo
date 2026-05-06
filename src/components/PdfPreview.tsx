@@ -260,6 +260,7 @@ function ResumenEjecutivoPage({
   const c = values.caratula;
   const nombre = c?.descripcion?.denominacion?.trim() || '(sin denominar)';
   const isUsd = c?.monedaEntrada === 'usd';
+  const otVacia = !c?.encabezado?.ot?.trim();
   return (
     <>
       <div
@@ -270,29 +271,75 @@ function ResumenEjecutivoPage({
           background: '#1a3a5c',
           color: '#ffffff',
           borderRadius: '2px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '6mm',
         }}
       >
-        <div
-          style={{
-            fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
-            fontSize: '8pt',
-            opacity: 0.75,
-            letterSpacing: '0.5px',
-            textTransform: 'uppercase',
-          }}
-        >
-          Resumen ejecutivo — denominación del proyecto
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+              fontSize: '8pt',
+              opacity: 0.75,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+            }}
+          >
+            Resumen ejecutivo — denominación del proyecto
+          </div>
+          <div
+            style={{
+              fontSize: '16pt',
+              fontWeight: 700,
+              marginTop: '1.5mm',
+              lineHeight: 1.2,
+            }}
+          >
+            {nombre}
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: '16pt',
-            fontWeight: 700,
-            marginTop: '1.5mm',
-            lineHeight: 1.2,
-          }}
-        >
-          {nombre}
-        </div>
+        {otVacia ? (
+          <div
+            style={{
+              flex: '0 0 auto',
+              width: '38mm',
+              height: '15mm',
+              background: '#ffffff',
+              borderRadius: '1px',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              flex: '0 0 auto',
+              textAlign: 'right',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+                fontSize: '8pt',
+                opacity: 0.75,
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+              }}
+            >
+              OT
+            </div>
+            <div
+              style={{
+                fontSize: '14pt',
+                fontWeight: 700,
+                marginTop: '1.5mm',
+                lineHeight: 1.2,
+              }}
+            >
+              {c?.encabezado?.ot}
+            </div>
+          </div>
+        )}
       </div>
 
       {isUsd && (
@@ -1402,16 +1449,28 @@ function AnexosTecnologicosBlock({
       <div
         style={{
           background: '#1a3a5c',
-          color: '#ffffff',
-          padding: '1.5mm 3mm',
-          fontSize: '8.5pt',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.4px',
+          borderRadius: '1px',
           marginBottom: '1.5mm',
+          display: 'table',
+          width: '100%',
+          height: '7mm',
         }}
       >
-        TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
+        <span
+          style={{
+            display: 'table-cell',
+            verticalAlign: 'middle',
+            padding: '0 3mm',
+            color: '#ffffff',
+            fontSize: '8.5pt',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.4px',
+            lineHeight: 1.2,
+          }}
+        >
+          TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
+        </span>
       </div>
       <table
         style={{
@@ -1599,8 +1658,7 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
     <div
       style={{
         display: 'flex',
-        alignItems: 'baseline',
-        justifyContent: 'center',
+        alignItems: 'center',
         gap: '3mm',
         marginTop: '2mm',
         marginBottom: '1mm',
@@ -1629,19 +1687,30 @@ function SectionTitle({ children }: { children: ReactNode }) {
     <h2
       style={{
         background: '#1a3a5c',
-        color: '#ffffff',
-        padding: '1.5mm 3mm',
-        fontSize: '9pt',
-        fontWeight: 600,
-        textTransform: 'uppercase',
-        letterSpacing: '0.4px',
+        borderRadius: '1px',
         marginTop: '4mm',
         marginBottom: '2.5mm',
-        borderRadius: '1px',
-        textAlign: 'center',
+        padding: 0,
+        display: 'table',
+        width: '100%',
+        height: '7mm',
       }}
     >
-      {children}
+      <span
+        style={{
+          display: 'table-cell',
+          verticalAlign: 'middle',
+          padding: '0 3mm',
+          color: '#ffffff',
+          fontSize: '9pt',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: '0.4px',
+          lineHeight: 1.2,
+        }}
+      >
+        {children}
+      </span>
     </h2>
   );
 }
@@ -1758,16 +1827,27 @@ function KVBlock({
     >
       <div
         style={{
-          fontSize: '8pt',
-          fontWeight: 700,
-          color: '#ffffff',
           background: '#1a3a5c',
-          textTransform: 'uppercase',
-          letterSpacing: '0.3px',
-          padding: '1.5mm 3mm',
+          display: 'table',
+          width: '100%',
+          height: '6mm',
         }}
       >
-        {label}
+        <span
+          style={{
+            display: 'table-cell',
+            verticalAlign: 'middle',
+            padding: '0 3mm',
+            color: '#ffffff',
+            fontSize: '8pt',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.3px',
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </span>
       </div>
       <div
         style={{
