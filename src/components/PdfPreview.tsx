@@ -504,35 +504,26 @@ function ResumenEjecutivoPage({
         </table>
       )}
 
+      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
+      <Grid cols="repeat(3, 1fr)" gap="3mm">
+        {AUTORIZACIONES.slice(0, 6).map((a) => (
+          <FirmaBox key={a.key} label={a.label} />
+        ))}
+      </Grid>
+      <div style={{ marginTop: '3mm' }}>
+        <FirmaBox label="7. Directorio" />
+      </div>
+
       <SectionTitle>Observaciones</SectionTitle>
       <div
         style={{
           border: '1px solid #c8c0b4',
           borderRadius: '2px',
-          padding: '4mm 5mm',
+          padding: '3mm 4mm',
           background: '#ffffff',
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
+          minHeight: '25mm',
         }}
-      >
-        <div
-          style={{
-            fontSize: '9pt',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            color: '#1a3a5c',
-            letterSpacing: '0.3px',
-            borderBottom: '1px solid #e8e0d4',
-            paddingBottom: '2mm',
-            marginBottom: '3mm',
-          }}
-        >
-          Observaciones
-        </div>
-        <div style={{ flex: 1 }} />
-      </div>
+      />
     </>
   );
 }
@@ -547,9 +538,9 @@ function FirmaBox({ label }: { label: string }) {
       style={{
         border: '1px solid #c8c0b4',
         borderRadius: '2px',
-        padding: '3mm 4mm',
+        padding: '2.5mm 3.5mm',
         background: '#ffffff',
-        minHeight: '36mm',
+        minHeight: '28mm',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -562,9 +553,9 @@ function FirmaBox({ label }: { label: string }) {
           color: '#1a3a5c',
           letterSpacing: '0.3px',
           borderBottom: '1px solid #c8c0b4',
-          paddingBottom: '1.5mm',
-          marginBottom: '2mm',
-          minHeight: '8mm',
+          paddingBottom: '1.2mm',
+          marginBottom: '1.5mm',
+          minHeight: '7mm',
         }}
       >
         {label}
@@ -573,8 +564,8 @@ function FirmaBox({ label }: { label: string }) {
       <div
         style={{
           borderBottom: '1px solid #6b6158',
-          height: '12mm',
-          marginBottom: '1.5mm',
+          height: '8mm',
+          marginBottom: '1mm',
         }}
       />
       <div
@@ -594,22 +585,24 @@ function FirmaBox({ label }: { label: string }) {
 }
 
 /**
- * Segunda hoja del Resumen Ejecutivo — Autorizaciones (firmas de los 7
- * Aprobadores de APEM). Pensado para impresión doble faz con la primera
- * hoja del Resumen (que tiene tabla + observaciones).
+ * Segunda hoja del Resumen Ejecutivo — recuadro grande de Observaciones
+ * que ocupa toda la página, complementario al recuadro chico de la pág 1.
+ * Pensado para impresión doble faz.
  */
 function ResumenEjecutivoAutorizacionesPage() {
   return (
     <>
-      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
-      <Grid cols="repeat(3, 1fr)" gap="3mm">
-        {AUTORIZACIONES.slice(0, 6).map((a) => (
-          <FirmaBox key={a.key} label={a.label} />
-        ))}
-      </Grid>
-      <div style={{ marginTop: '3mm' }}>
-        <FirmaBox label="7. Directorio" />
-      </div>
+      <SectionTitle>Observaciones</SectionTitle>
+      <div
+        style={{
+          border: '1px solid #c8c0b4',
+          borderRadius: '2px',
+          padding: '4mm 5mm',
+          background: '#ffffff',
+          flex: 1,
+          minHeight: 0,
+        }}
+      />
     </>
   );
 }
