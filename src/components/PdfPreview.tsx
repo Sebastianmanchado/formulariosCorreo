@@ -1314,26 +1314,19 @@ function AnexoSubsectionBlock({
           background: '#eae6e0',
           borderLeft: '4px solid #1a3a5c',
           marginBottom: '1.5mm',
-          display: 'table',
-          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
           minHeight: '7mm',
+          padding: '1.5mm 3mm',
+          fontSize: '8.5pt',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          color: '#1a3a5c',
+          letterSpacing: '0.3px',
+          lineHeight: 1.2,
         }}
       >
-        <span
-          style={{
-            display: 'table-cell',
-            verticalAlign: 'middle',
-            padding: '1.5mm 3mm',
-            fontSize: '8.5pt',
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            color: '#1a3a5c',
-            letterSpacing: '0.3px',
-            lineHeight: 1.2,
-          }}
-        >
-          {title}
-        </span>
+        {title}
       </div>
       <table
         style={{
@@ -1462,26 +1455,19 @@ function AnexosTecnologicosBlock({
           background: '#1a3a5c',
           borderRadius: '1px',
           marginBottom: '1.5mm',
-          display: 'table',
-          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
           minHeight: '7mm',
+          padding: '1.5mm 3mm',
+          color: '#ffffff',
+          fontSize: '8.5pt',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.4px',
+          lineHeight: 1.2,
         }}
       >
-        <span
-          style={{
-            display: 'table-cell',
-            verticalAlign: 'middle',
-            padding: '1.5mm 3mm',
-            color: '#ffffff',
-            fontSize: '8.5pt',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.4px',
-            lineHeight: 1.2,
-          }}
-        >
-          TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
-        </span>
+        TOTAL ACTIVOS TECNOLÓGICOS (a1.1 + a1.2 + a1.3 + a1.4)
       </div>
       <table
         style={{
@@ -1670,7 +1656,6 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
       style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
         gap: '3mm',
         marginTop: '2mm',
         marginBottom: '1mm',
@@ -1711,27 +1696,21 @@ function SectionTitle({ children }: { children: ReactNode }) {
         borderRadius: '1px',
         marginTop: '4mm',
         marginBottom: '2.5mm',
-        padding: 0,
-        display: 'table',
-        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         minHeight: '7mm',
+        padding: '1.5mm 3mm',
+        color: '#ffffff',
+        fontSize: '9pt',
+        fontWeight: 600,
+        textTransform: 'uppercase',
+        letterSpacing: '0.4px',
+        lineHeight: 1.2,
+        textAlign: 'center',
       }}
     >
-      <span
-        style={{
-          display: 'table-cell',
-          verticalAlign: 'middle',
-          padding: '1.5mm 3mm',
-          color: '#ffffff',
-          fontSize: '9pt',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.4px',
-          lineHeight: 1.2,
-        }}
-      >
-        {children}
-      </span>
+      {children}
     </h2>
   );
 }
@@ -1849,26 +1828,19 @@ function KVBlock({
       <div
         style={{
           background: '#1a3a5c',
-          display: 'table',
-          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
           minHeight: '6mm',
+          padding: '1.5mm 3mm',
+          color: '#ffffff',
+          fontSize: '8pt',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
+          lineHeight: 1.2,
         }}
       >
-        <span
-          style={{
-            display: 'table-cell',
-            verticalAlign: 'middle',
-            padding: '1.5mm 3mm',
-            color: '#ffffff',
-            fontSize: '8pt',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.3px',
-            lineHeight: 1.2,
-          }}
-        >
-          {label}
-        </span>
+        {label}
       </div>
       <div
         style={{
