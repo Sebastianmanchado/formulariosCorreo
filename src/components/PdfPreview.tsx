@@ -1670,12 +1670,21 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
       style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '3mm',
         marginTop: '2mm',
         marginBottom: '1mm',
+        lineHeight: 1,
       }}
     >
-      <span style={{ fontSize: '14pt', fontWeight: 700, color: '#1a3a5c' }}>
+      <span
+        style={{
+          fontSize: '14pt',
+          fontWeight: 700,
+          color: '#1a3a5c',
+          lineHeight: 1,
+        }}
+      >
         {tag}
       </span>
       <span
@@ -1685,6 +1694,7 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
           color: '#1c1814',
           textTransform: 'uppercase',
           letterSpacing: '0.3px',
+          lineHeight: 1,
         }}
       >
         {title}
