@@ -304,8 +304,8 @@ function ResumenEjecutivoPage({
           <div
             style={{
               flex: '0 0 auto',
-              width: '38mm',
-              height: '15mm',
+              width: '22mm',
+              height: '8mm',
               background: '#ffffff',
               borderRadius: '1px',
             }}
