@@ -605,7 +605,7 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
         <KVRow label="Fecha" value={formatDateAR(c?.encabezado?.fecha)} />
         <KVRow label="Dirección" value={c?.encabezado?.direccion || '—'} />
         <KVRow label="Gerencia" value={c?.encabezado?.gerencia || '—'} />
-        <KVRow label="OT" value={c?.encabezado?.ot || '—'} />
+        <KVRow label="OT" value={c?.encabezado?.ot || ''} />
       </KV>
 
       <SectionTitle>A. Descripción General</SectionTitle>
@@ -1600,6 +1600,7 @@ function PageHeadingRow({ tag, title }: { tag: string; title: string }) {
       style={{
         display: 'flex',
         alignItems: 'baseline',
+        justifyContent: 'center',
         gap: '3mm',
         marginTop: '2mm',
         marginBottom: '1mm',
@@ -1637,6 +1638,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
         marginTop: '4mm',
         marginBottom: '2.5mm',
         borderRadius: '1px',
+        textAlign: 'center',
       }}
     >
       {children}
