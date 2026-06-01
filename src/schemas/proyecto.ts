@@ -77,11 +77,50 @@ const descripcionSchema = z.object({
 });
 
 // ─── Características básicas ────────────────────────────────────────────────
-const caracteristicasSchema = z.object({
-  mesInicio: textField,
-  mesFinErogacion: textField,
-  mesFinProyecto: textField,
-});
+const YM_RE = /^(\d{4})-(\d{2})$/;
+
+function isYearMonth(v: string): boolean {
+  return YM_RE.test(v);
+}
+
+/** Compara "YYYY-MM". Devuelve negativo si a < b. */
+function compareYearMonth(a: string, b: string): number {
+  return a.localeCompare(b);
+}
+
+const caracteristicasSchema = z
+  .object({
+    mesInicio: textField,
+    mesFinErogacion: textField,
+    mesFinProyecto: textField,
+  })
+  .superRefine((data, ctx) => {
+    const { mesInicio, mesFinErogacion, mesFinProyecto } = data;
+    if (!mesInicio || !isYearMonth(mesInicio)) return;
+
+    if (
+      mesFinErogacion &&
+      isYearMonth(mesFinErogacion) &&
+      compareYearMonth(mesFinErogacion, mesInicio) <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Debe ser posterior al mes de inicio del proyecto',
+        path: ['mesFinErogacion'],
+      });
+    }
+    if (
+      mesFinProyecto &&
+      isYearMonth(mesFinProyecto) &&
+      compareYearMonth(mesFinProyecto, mesInicio) <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Debe ser posterior al mes de inicio del proyecto',
+        path: ['mesFinProyecto'],
+      });
+    }
+  });
 
 // ─── Resumen de montos ──────────────────────────────────────────────────────
 const filaResumenSchema = z.object({

@@ -18,6 +18,7 @@ import {
 } from './hooks/useLocalStorage';
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
+import { CORREO_AMARILLO } from './data/constants';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { monthYearShort } from './utils/formatters';
 
@@ -146,6 +147,18 @@ function AppInner() {
 
   const handleGeneratePdf = async () => {
     persist.saveNow();
+    const valid = await methods.trigger([
+      'caratula.caracteristicas.mesInicio',
+      'caratula.caracteristicas.mesFinErogacion',
+      'caratula.caracteristicas.mesFinProyecto',
+    ]);
+    if (!valid) {
+      window.alert(
+        'Revisá las fechas en Características Básicas: los meses de finalización deben ser posteriores al mes de inicio.'
+      );
+      scrollToSection('section-caratula', false);
+      return;
+    }
     const values = methods.getValues();
     setPdf({ generating: true, values });
     await new Promise<void>((resolve) =>
@@ -246,13 +259,25 @@ function Topbar({
 }) {
   return (
     <header className="flex items-center justify-between gap-4 bg-accent px-6 py-3 text-white">
-      <div className="flex min-w-0 flex-col">
-        <span className="font-mono text-[11px] tracking-wider opacity-70">
-          AD-OO-0136/01-07 {monthYearShort()}
-        </span>
-        <span className="truncate text-[15px] font-semibold">
-          Aprobación de Proyecto de Erogaciones Mayores
-        </span>
+      <div className="flex min-w-0 items-center gap-4">
+        <div
+          className="shrink-0 rounded-sm px-2 py-1.5 leading-none"
+          style={{ background: CORREO_AMARILLO }}
+        >
+          <img
+            src="/logo-correo-argentino.png"
+            alt="Correo Argentino"
+            className="block h-9 w-auto"
+          />
+        </div>
+        <div className="flex min-w-0 flex-col">
+          <span className="font-mono text-[11px] tracking-wider opacity-70">
+            AD-OO-0136/01-07 {monthYearShort()}
+          </span>
+          <span className="truncate text-[15px] font-semibold">
+            Aprobación de Proyecto de Erogaciones Mayores
+          </span>
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <SaveIndicator

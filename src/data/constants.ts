@@ -1,3 +1,6 @@
+/** Amarillo institucional de Correo Argentino (ver correoargentino.com.ar). */
+export const CORREO_AMARILLO = '#FFCC00';
+
 /**
  * Opciones de selects del formulario.
  * Las `value` se persisten en el schema; los `label` se muestran en la UI y el PDF.

@@ -1,6 +1,7 @@
 import { forwardRef, useMemo, type ReactNode, type CSSProperties } from 'react';
 import {
   AUTORIZACIONES,
+  CORREO_AMARILLO,
   labelForModalidad,
   labelForTipoErogacion,
 } from '../data/constants';
@@ -300,34 +301,35 @@ function ResumenEjecutivoPage({
             {nombre}
           </div>
         </div>
-        {otVacia ? (
+        <div
+          style={{
+            flex: '0 0 auto',
+            textAlign: 'right',
+          }}
+        >
           <div
             style={{
-              flex: '0 0 auto',
-              width: '22mm',
-              height: '8mm',
-              background: '#ffffff',
-              borderRadius: '1px',
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              flex: '0 0 auto',
-              textAlign: 'right',
+              fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
+              fontSize: '8pt',
+              opacity: 0.75,
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
             }}
           >
+            OT
+          </div>
+          {otVacia ? (
             <div
               style={{
-                fontFamily: '"IBM Plex Mono", ui-monospace, monospace',
-                fontSize: '8pt',
-                opacity: 0.75,
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
+                width: '22mm',
+                height: '8mm',
+                background: '#ffffff',
+                borderRadius: '1px',
+                marginTop: '1.5mm',
+                marginLeft: 'auto',
               }}
-            >
-              OT
-            </div>
+            />
+          ) : (
             <div
               style={{
                 fontSize: '14pt',
@@ -338,8 +340,8 @@ function ResumenEjecutivoPage({
             >
               {c?.encabezado?.ot}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {isUsd && (
@@ -1582,11 +1584,31 @@ function Header({ n, total }: { n: number; total: number }) {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
+        gap: '4mm',
         borderBottom: '2px solid #1a3a5c',
         paddingBottom: '2mm',
       }}
     >
-      <div>
+      <div
+        style={{
+          flex: '0 0 auto',
+          background: CORREO_AMARILLO,
+          padding: '1.5mm 2.5mm',
+          borderRadius: '1px',
+          lineHeight: 0,
+        }}
+      >
+        <img
+          src="/logo-correo-argentino.png"
+          alt="Correo Argentino"
+          style={{
+            height: '10mm',
+            width: 'auto',
+            display: 'block',
+          }}
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontFamily: '"IBM Plex Mono", ui-monospace, monospace',

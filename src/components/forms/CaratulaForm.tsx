@@ -291,6 +291,22 @@ function DescripcionGeneralSection() {
 
 // ─── Características básicas ────────────────────────────────────────────────
 function CaracteristicasSection() {
+  const {
+    control,
+    trigger,
+    formState: { errors },
+  } = useFormContext<Proyecto>();
+  const carErr = errors.caratula?.caracteristicas;
+  const mesInicio = useWatch({ control, name: 'caratula.caracteristicas.mesInicio' });
+
+  useEffect(() => {
+    if (!mesInicio) return;
+    void trigger([
+      'caratula.caracteristicas.mesFinErogacion',
+      'caratula.caracteristicas.mesFinProyecto',
+    ]);
+  }, [mesInicio, trigger]);
+
   return (
     <>
       <SectionTitle variant="sub">Características Básicas</SectionTitle>
@@ -303,11 +319,17 @@ function CaracteristicasSection() {
             <MonthYearPicker<Proyecto>
               name="caratula.caracteristicas.mesFinErogacion"
             />
+            {carErr?.mesFinErogacion?.message && (
+              <p className="text-[11px] text-accent2">{carErr.mesFinErogacion.message}</p>
+            )}
           </Field>
           <Field label="Mes de finalización del proyecto" orientation="column">
             <MonthYearPicker<Proyecto>
               name="caratula.caracteristicas.mesFinProyecto"
             />
+            {carErr?.mesFinProyecto?.message && (
+              <p className="text-[11px] text-accent2">{carErr.mesFinProyecto.message}</p>
+            )}
           </Field>
         </div>
       </Card>
