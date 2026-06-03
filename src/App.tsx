@@ -21,6 +21,7 @@ import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
 import { CORREO_AMARILLO } from './data/constants';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { monthYearShort } from './utils/formatters';
+import { logger } from './utils/logger';
 
 type PdfState = { generating: false } | { generating: true; values: Proyecto };
 
@@ -138,6 +139,7 @@ function AppInner() {
     methods.reset(fresh);
     // Flush inmediato del borrador ya depurado.
     persist.saveNow();
+    logger.info('currency.changed', { to: next });
     // NO limpiamos `attachments`: los blobs referenciados por
     // `descripcionAnexos`/`objetivosAnexos` siguen siendo válidos tras el
     // cambio de moneda y los necesitamos para imprimir adjuntos en el PDF.
@@ -147,12 +149,14 @@ function AppInner() {
 
   const handleGeneratePdf = async () => {
     persist.saveNow();
-    const valid = await methods.trigger([
+    const dateFields = [
       'caratula.caracteristicas.mesInicio',
       'caratula.caracteristicas.mesFinErogacion',
       'caratula.caracteristicas.mesFinProyecto',
-    ]);
+    ] as const;
+    const valid = await methods.trigger([...dateFields]);
     if (!valid) {
+      logger.warn('pdf.validation_failed', { fields: [...dateFields] });
       window.alert(
         'Revisá las fechas en Características Básicas: los meses de finalización deben ser posteriores al mes de inicio.'
       );
@@ -160,6 +164,12 @@ function AppInner() {
       return;
     }
     const values = methods.getValues();
+    const attachmentGroups = buildAttachmentGroups(values, attachments);
+    const attachmentCount = attachmentGroups.reduce(
+      (n, g) => n + g.items.length,
+      0
+    );
+    logger.info('pdf.generation_started', { attachmentCount });
     setPdf({ generating: true, values });
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
@@ -169,12 +179,13 @@ function AppInner() {
       if (root) {
         await generateProyectoPdf(root, {
           nombreProyecto: values.caratula?.descripcion?.denominacion,
-          attachments: buildAttachmentGroups(values, attachments),
+          attachments: attachmentGroups,
         });
+      } else {
+        throw new Error('PdfPreview no disponible para exportar.');
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Error generando PDF:', err);
+      logger.error('pdf.generation_failed', {}, err);
       window.alert(
         'Hubo un problema generando el PDF. Revisá la consola para más detalle.'
       );

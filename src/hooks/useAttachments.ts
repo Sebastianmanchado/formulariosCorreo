@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { nuevoArchivoMeta, type ArchivoMeta } from '../schemas/proyecto';
+import { logger } from '../utils/logger';
 
 export interface AttachmentsApi {
   /** Registra blobs en memoria y devuelve los metadatos (id/name/type/size). */
@@ -39,16 +40,25 @@ export function AttachmentsProvider({ children }: { children: ReactNode }) {
           const meta = nuevoArchivoMeta(file);
           blobsRef.current.set(meta.id, file);
           metas.push(meta);
+          logger.info('attachment.added', {
+            id: meta.id,
+            name: meta.name,
+            size: meta.size,
+            type: meta.type,
+          });
         }
         return metas;
       },
       remove: (id) => {
         blobsRef.current.delete(id);
+        logger.info('attachment.removed', { id });
       },
       getBlob: (id) => blobsRef.current.get(id),
       has: (id) => blobsRef.current.has(id),
       clearAll: () => {
+        const count = blobsRef.current.size;
         blobsRef.current.clear();
+        logger.info('attachments.cleared', { count });
       },
     }),
     []

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { proyectoSchema, type Proyecto } from '../schemas/proyecto';
+import { logger } from '../utils/logger';
 
 /**
  * Clave versionada del storage. Bumpeala si el schema cambia de forma
@@ -43,7 +44,9 @@ export function loadProyectoFromStorage(): Proyecto | undefined {
       }
     }
   }
-  return readAndParse(PROYECTO_STORAGE_KEY);
+  const loaded = readAndParse(PROYECTO_STORAGE_KEY);
+  logger.info('draft.loaded', { found: loaded !== undefined });
+  return loaded;
 }
 
 export function saveProyectoToStorage(proyecto: Proyecto): boolean {
@@ -98,13 +101,15 @@ export function useProyectoPersist(
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const commit = useCallback((values: Proyecto) => {
+  const commit = useCallback((values: Proyecto, trigger: 'auto' | 'manual') => {
     const ok = saveProyectoToStorage(values);
     if (ok) {
       setStatus('saved');
       setLastSavedAt(new Date());
+      logger.info('draft.saved', { trigger });
     } else {
       setStatus('error');
+      logger.error('draft.save_failed', { trigger });
     }
   }, []);
 
@@ -114,7 +119,7 @@ export function useProyectoPersist(
       setStatus('saving');
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        commit(values as Proyecto);
+        commit(values as Proyecto, 'auto');
       }, debounceMs);
     });
     return () => {
@@ -131,7 +136,7 @@ export function useProyectoPersist(
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    commit(methods.getValues());
+    commit(methods.getValues(), 'manual');
   }, [commit, methods]);
 
   const clearStorage = useCallback(() => {
@@ -142,6 +147,7 @@ export function useProyectoPersist(
     clearProyectoStorage();
     setStatus('idle');
     setLastSavedAt(null);
+    logger.info('draft.cleared');
   }, []);
 
   return { status, lastSavedAt, saveNow, clearStorage };

@@ -1,5 +1,6 @@
 import type { ArchivoMeta } from '../schemas/proyecto';
 import { slugify } from './formatters';
+import { logger } from './logger';
 
 const DIM = {
   portrait: { w: 210, h: 297 },
@@ -53,12 +54,21 @@ export async function generateProyectoPdf(
   root: HTMLElement,
   options: GenerateOptions = {}
 ): Promise<void> {
+  const startedAt = performance.now();
   const pages = Array.from(
     root.querySelectorAll<HTMLElement>('[data-pdf-page]')
   );
   if (pages.length === 0) {
     throw new Error('PdfPreview: no se encontraron páginas para exportar.');
   }
+
+  const logCompleted = (extra: Record<string, unknown>) => {
+    logger.info('pdf.generation_completed', {
+      durationMs: Math.round(performance.now() - startedAt),
+      pageCount: pages.length,
+      ...extra,
+    });
+  };
 
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import('html2canvas'),
@@ -102,9 +112,11 @@ export async function generateProyectoPdf(
   const fileName = buildFileName(options);
   const groups = options.attachments ?? [];
   const hasAnyAttachment = groups.some((g) => g.items.length > 0);
+  const attachmentCount = groups.reduce((n, g) => n + g.items.length, 0);
 
   if (!hasAnyAttachment) {
     pdf.save(fileName);
+    logCompleted({ attachmentCount: 0, skippedCount: 0, mergeFailed: false });
     return;
   }
 
@@ -126,8 +138,7 @@ export async function generateProyectoPdf(
     try {
       await drawSeparatorPage(finalDoc, groups, helv, helvBold, rgb);
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('No se pudo dibujar la página de separador de anexos:', err);
+      logger.warn('pdf.separator_failed', {}, err);
     }
 
     for (const group of groups) {
@@ -136,8 +147,7 @@ export async function generateProyectoPdf(
         try {
           await appendAttachment(finalDoc, item.blob, item.meta.name, helv, rgb);
         } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn('No se pudo incluir el adjunto:', item.meta.name, err);
+          logger.warn('pdf.attachment_skipped', { name: item.meta.name }, err);
           skipped.push(item.meta.name);
         }
       }
@@ -150,13 +160,17 @@ export async function generateProyectoPdf(
     downloadBlob(blob, fileName);
     mergedOk = true;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('El merge con pdf-lib falló por completo:', err);
+    logger.error('pdf.merge_failed', {}, err);
   }
 
   // Fallback: si el merge falló entero, entregamos el PDF base sin adjuntos.
   if (!mergedOk) {
     pdf.save(fileName);
+    logCompleted({
+      attachmentCount,
+      skippedCount: skipped.length,
+      mergeFailed: true,
+    });
     if (typeof window !== 'undefined') {
       window.alert(
         'Se generó el PDF del formulario, pero los archivos adjuntos no pudieron ' +
@@ -165,6 +179,12 @@ export async function generateProyectoPdf(
     }
     return;
   }
+
+  logCompleted({
+    attachmentCount,
+    skippedCount: skipped.length,
+    mergeFailed: false,
+  });
 
   if (skipped.length > 0 && typeof window !== 'undefined') {
     window.alert(
