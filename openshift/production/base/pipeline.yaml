@@ -1,0 +1,133 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: apemformularios-pipeline
+  namespace: apem-prod
+spec:
+  params:
+    - default: http://gitlab.correo.local/apem/apemformularios
+      description: URL of the git repo for the code of deployment
+      name: GIT_URL
+      type: string
+    - default: main
+      description: Select branch
+      name: GIT_BRANCH
+      type: string
+    - default: openshift/production
+      description: Path to the folder of the manifests
+      name: PATH_YAML
+      type: string
+    - default: apem
+      description: Nombre de la organizacion
+      name: app_group
+      type: string
+    - default: apemformularios
+      description: Nombre de la aplicacion
+      name: app_name
+      type: string
+    - default: jsuarez@correoargentino.com.ar
+      description: Nombre del desa que despliega
+      name: push-user
+      type: string
+  tasks:
+    - name: git-clone
+      params:
+        - name: URL
+          value: $(params.GIT_URL)
+        - name: SUBDIRECTORY
+          value: $(context.pipelineRun.namespace)/$(params.app_name)
+        - name: DELETE_EXISTING
+          value: 'true'
+        - name: REVISION
+          value: $(params.GIT_BRANCH)
+        - name: SSL_VERIFY
+          value: 'false'
+        - name: SPARSE_CHECKOUT_DIRECTORIES
+          value: ''
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone-correo
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+    - name: buildah
+      params:
+        - name: IMAGE
+          value: >-
+            image-registry.openshift-image-registry.svc:5000/$(context.pipelineRun.namespace)/$(params.app_name):latest
+        - name: DOCKERFILE
+          value: ./Dockerfile
+        - name: CONTEXT
+          value: ./$(context.pipelineRun.namespace)/$(params.app_name)
+        - name: TLSVERIFY
+          value: 'true'
+      runAfter:
+        - git-clone
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: buildah-correo
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+    - name: apply-manifests-and-restart
+      params:
+        - name: PATH_YAMLS
+          value: >-
+            $(context.pipelineRun.namespace)/$(params.app_name)/$(params.PATH_YAML)
+        - name: DEPLOYMENT_NAME
+          value: $(params.app_name)
+      runAfter:
+        - buildah
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: apply-manifests-and-restart-correo
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+    - name: sendmail-pipelines-correo-new
+      params:
+        - name: destinatarios
+          value: $(params.push-user)
+        - name: commit
+          value: $(tasks.git-clone.results.COMMIT)
+        - name: app-name
+          value: $(params.app_name)
+        - name: git-url
+          value: $(params.GIT_URL)
+        - name: git-branch
+          value: $(params.GIT_BRANCH)
+      runAfter:
+        - apply-manifests-and-restart
+      taskRef:
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: sendmail-pipelines-correo-new
+          - name: namespace
+            value: openshift-pipelines
+        resolver: cluster
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+  workspaces:
+    - name: shared-workspace
+  finally: []
