@@ -1,7 +1,7 @@
 /** Amarillo institucional de Correo Argentino (ver correoargentino.com.ar). */
 export const CORREO_AMARILLO = '#FFCC00';
 
-export const APP_VERSION = 'v1.01';
+export const APP_VERSION = 'v1.01.1';
 
 /**
  * Opciones de selects del formulario.

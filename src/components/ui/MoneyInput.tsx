@@ -75,6 +75,7 @@ function MoneyInputInner({
         ? raw
         : formatMoney(value);
 
+
   return (
     <div className={`relative inline-flex w-full items-center ${className}`}>
       <input
@@ -88,7 +89,8 @@ function MoneyInputInner({
         value={display}
         onFocus={(e) => {
           setFocused(true);
-          setRaw(value === null || value === undefined ? '' : String(value));
+          // Mostrar valor formateado con separadores al enfocar para facilitar lectura
+          setRaw(value === null || value === undefined ? '' : formatMoney(value));
           e.currentTarget.select();
         }}
         onBlur={() => {

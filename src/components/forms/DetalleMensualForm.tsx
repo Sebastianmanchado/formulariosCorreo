@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useCallback, useContext, useRef, createContext, type ReactNode } from 'react';
 import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import {
   useDetalleTotales,
@@ -10,7 +10,9 @@ import {
   MESES_LABELS,
   type Proyecto,
 } from '../../schemas/proyecto';
-import { formatMoneyZero } from '../../utils/formatters';
+import { formatMoney } from '../../utils/formatters';
+
+const FmtCtx = createContext<(v: number) => string>((v) => String(v || 0));
 import { MoneyInput, SectionTitle } from '../ui';
 
 export function DetalleMensualForm() {
@@ -24,6 +26,18 @@ export function DetalleMensualForm() {
     control,
     name: 'caratula.descripcion.denominacion',
   });
+
+  const monedaEntrada = useWatch({ control, name: 'caratula.monedaEntrada' });
+  const cotizacion = useWatch({ control, name: 'caratula.cotizacionUsd' });
+  const isUsd = monedaEntrada === 'usd' && typeof cotizacion === 'number' && cotizacion > 0;
+
+  // Formatea un monto almacenado en millones de pesos según la moneda activa.
+  const fmt = useCallback((mills: number): string => {
+    const v = isUsd
+      ? parseFloat(((mills * 1_000_000) / (cotizacion as number)).toFixed(2))
+      : mills;
+    return formatMoney(v) || '0';
+  }, [isUsd, cotizacion]);
 
   return (
     <div>
@@ -41,7 +55,7 @@ export function DetalleMensualForm() {
           </div>
         </div>
         <div className="pb-1 text-[11px] italic text-ink-muted">
-          Importes en Millones de Pesos o USD según moneda seleccionada
+          Importes en {isUsd ? 'USD' : 'Pesos'}
         </div>
       </div>
 
@@ -71,6 +85,7 @@ export function DetalleMensualForm() {
               <Th highlight>Total año</Th>
             </tr>
           </thead>
+          <FmtCtx.Provider value={fmt}>
           <tbody>
             {/* ═══ a) Detalle de la Erogación ═══ */}
             <SectionRow label="a) Detalle de la Erogación" />
@@ -232,6 +247,7 @@ export function DetalleMensualForm() {
               emphasis="strong"
             />
           </tbody>
+          </FmtCtx.Provider>
         </table>
       </div>
     </div>
@@ -329,6 +345,7 @@ function DataRow({
   /** Índice de fila para useGridNavigation. */
   gridRow: number;
 }) {
+  const fmt = useContext(FmtCtx);
   const { register, control } = useFormContext<Proyecto>();
   return (
     <tr className="hover:bg-surface">
@@ -364,7 +381,7 @@ function DataRow({
         </td>
       ))}
       <td className="border-b border-accent/10 bg-accent/5 px-2 py-1 text-right font-mono text-[10px] font-semibold text-accent">
-        {formatMoneyZero(rowTotal)}
+        {fmt(rowTotal)}
       </td>
     </tr>
   );
@@ -379,6 +396,7 @@ function TotalRow({
   per: PerColumn;
   emphasis?: 'normal' | 'strong';
 }) {
+  const fmt = useContext(FmtCtx);
   const isStrong = emphasis === 'strong';
   const bg = isStrong ? 'bg-accent text-white' : 'bg-total';
   const textColor = isStrong ? 'text-white' : 'text-accent';
@@ -398,19 +416,20 @@ function TotalRow({
           key={m}
           className={`border-b border-r border-border ${bg} px-1 py-1 text-right font-mono text-[10px] font-bold ${textColor}`}
         >
-          {formatMoneyZero(per.meses[m])}
+          {fmt(per.meses[m])}
         </td>
       ))}
       <td
         className={`border-b ${bg} px-2 py-1 text-right font-mono text-[11px] font-bold ${textColor}`}
       >
-        {formatMoneyZero(per.anual)}
+        {fmt(per.anual)}
       </td>
     </tr>
   );
 }
 
 function MirrorRow({ label, per }: { label: string; per: PerColumn }) {
+  const fmt = useContext(FmtCtx);
   return (
     <tr>
       <td className="sticky left-0 z-10 border-b border-r-2 border-border bg-accent/5 p-0">
@@ -423,11 +442,11 @@ function MirrorRow({ label, per }: { label: string; per: PerColumn }) {
           key={m}
           className="border-b border-r border-border bg-accent/5 px-1 py-1 text-right font-mono text-[10px] font-semibold text-accent"
         >
-          {formatMoneyZero(per.meses[m])}
+          {fmt(per.meses[m])}
         </td>
       ))}
       <td className="border-b bg-accent/5 px-2 py-1 text-right font-mono text-[11px] font-semibold text-accent">
-        {formatMoneyZero(per.anual)}
+        {fmt(per.anual)}
       </td>
     </tr>
   );

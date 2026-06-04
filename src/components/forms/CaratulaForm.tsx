@@ -427,19 +427,19 @@ function ResumenMontosSection() {
           <thead>
             <tr>
               <th className="w-[38%] border border-accent-light bg-accent px-2 py-1.5 text-left text-[11px] font-semibold text-white">
-                Concepto <span className="font-normal text-white/70">(Millones de Pesos)</span>
+                Concepto <span className="font-normal text-white/70">(M$)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Año actual (Millones de Pesos)
+                Ej. Actual (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Años siguientes (Millones de Pesos)
+                Ej. Siguientes (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Total (Millones de Pesos)
+                Total (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Previsto en Presupuesto (Millones de Pesos)
+                Previsto (M$)
               </th>
             </tr>
           </thead>
@@ -744,6 +744,7 @@ function InfoTISection() {
 
 // ─── B. Evaluación económica ────────────────────────────────────────────────
 function EvaluacionEconomicaSection() {
+  const { control } = useFormContext<Proyecto>();
   return (
     <>
       <SectionTitle>B. Resultados de la Evaluación Económica</SectionTitle>
@@ -761,8 +762,8 @@ function EvaluacionEconomicaSection() {
           <Field label="Tasa de corte %" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.tasaCorte" />
           </Field>
-          <Field label="VAN, en Millones de Pesos o USD según moneda ingresada" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.van" />
+          <Field label="VAN (M$ o USD según moneda ingresada)" orientation="column">
+            <MoneyInput control={control} name="caratula.evaluacion.van" fixedCurrency="pesos" />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.periodoRepagoMeses" />
@@ -895,7 +896,7 @@ function TotalRow({
     >
       <div className="grid grid-cols-[1fr_170px] items-center gap-3">
         <span className={`text-[12px] ${weight}`}>
-          {label} <span className="font-normal text-ink-muted">(Millones de Pesos)</span>
+          {label} <span className="font-normal text-ink-muted">(M$)</span>
         </span>
         <CalculatedField value={value} emphasis={emphasis} />
       </div>
