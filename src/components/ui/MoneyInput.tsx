@@ -174,10 +174,12 @@ export function MoneyInput<T extends FieldValues>({
       render={({ field }) => {
         const stored = field.value as number | null | undefined;
 
+        // En modo USD: convertir m$ → USD y redondear a 2 decimales para
+        // evitar mostrar artefactos de punto flotante (ej. 4341.864406779661).
         const displayValue: number | null | undefined = modeUsd
           ? stored === null || stored === undefined
             ? stored
-            : (stored * 1_000_000) / (cotizacion as number)
+            : parseFloat(((stored * 1_000_000) / (cotizacion as number)).toFixed(2))
           : stored;
 
         const handleChange = (next: number | undefined) => {

@@ -35,6 +35,10 @@ export function AnexosActivosForm() {
   });
   // Cotización USD de la Carátula, para los totales en USD.
   const cotizacion = useWatch({ control, name: 'caratula.cotizacionUsd' });
+  const monedaEntrada = useWatch({ control, name: 'caratula.monedaEntrada' });
+  const cotizacionValida =
+    typeof cotizacion === 'number' && cotizacion > 0 && Number.isFinite(cotizacion);
+  const modeUsd = monedaEntrada === 'usd' && cotizacionValida;
 
   return (
     <div className="space-y-2">
@@ -64,24 +68,28 @@ export function AnexosActivosForm() {
         sectionKey="hardware"
         totals={totales.sections.hardware}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
       <SubseccionTable
         title="a1.2 — Detalle de Software / Licencias"
         sectionKey="software"
         totals={totales.sections.software}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
       <SubseccionTable
         title="a1.3 — Desarrollos Externos"
         sectionKey="desarrollosExternos"
         totals={totales.sections.desarrollosExternos}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
       <SubseccionTable
         title="a1.4 — Otros Egresos Tecnológicos"
         sectionKey="otrosTecnologicos"
         totals={totales.sections.otrosTecnologicos}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
 
       <TotalAgregadoBox
@@ -97,6 +105,7 @@ export function AnexosActivosForm() {
         sectionKey="bienesUso"
         totals={totales.sections.bienesUso}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
 
       {/* a3 */}
@@ -106,6 +115,7 @@ export function AnexosActivosForm() {
         sectionKey="obras"
         totals={totales.sections.obras}
         cotizacion={cotizacion}
+        modeUsd={modeUsd}
       />
 
       {/*
@@ -124,11 +134,13 @@ function SubseccionTable({
   sectionKey,
   totals,
   cotizacion,
+  modeUsd,
 }: {
   title: string;
   sectionKey: AnexoSectionKey;
   totals: AnexoSectionTotals;
   cotizacion: number | null | undefined;
+  modeUsd: boolean;
 }) {
   const { register, control } = useFormContext<Proyecto>();
   const basePath = `anexosActivos.${sectionKey}.filas` as const;
@@ -254,7 +266,9 @@ function SubseccionTable({
                     />
                   </td>
                   <td className="break-all border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right align-top font-mono text-[10px] font-semibold text-accent">
-                    {formatMoneyZero(costoTotal)}
+                    {modeUsd
+                      ? formatUsdFromMiles(costoTotal, cotizacion)
+                      : formatMoneyZero(costoTotal)}
                   </td>
                   {MESES_KEYS.map((m, mi) => (
                     <td
@@ -273,7 +287,9 @@ function SubseccionTable({
                     </td>
                   ))}
                   <td className="break-all border-b border-r border-accent/20 bg-accent/5 px-1 py-1 text-right align-top font-mono text-[10px] font-semibold text-accent">
-                    {formatMoneyZero(totalAnual)}
+                    {modeUsd
+                      ? formatUsdFromMiles(totalAnual, cotizacion)
+                      : formatMoneyZero(totalAnual)}
                   </td>
                   <td className="border-b border-r border-border p-0">
                     <MoneyInput

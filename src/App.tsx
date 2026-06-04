@@ -18,7 +18,7 @@ import {
 } from './hooks/useLocalStorage';
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
-import { CORREO_AMARILLO } from './data/constants';
+import { CORREO_AMARILLO, APP_VERSION } from './data/constants';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { monthYearShort } from './utils/formatters';
 import { logger } from './utils/logger';
@@ -236,6 +236,11 @@ function AppInner() {
             ))}
           </form>
         </main>
+
+        {/* Footer */}
+        <footer className="no-print mt-10 border-t border-border py-4 text-center text-[11px] text-ink/40">
+          Correo Argentino © {new Date().getFullYear()} · {APP_VERSION}
+        </footer>
 
         {/* PdfPreview off-screen: se monta solo durante la generación. */}
         {pdf.generating && (
