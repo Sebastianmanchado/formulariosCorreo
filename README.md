@@ -3,7 +3,7 @@
 Aplicación de gestión de formularios con generación de PDFs avanzada.
 
 ## Versión
-v1.01.1
+v1.01.2
 # Archivos Autogenerados
 ## package.json
 "name": "ad-oo-0136-formulario" - Nombre del proyecto. Identificador único usado por npm.
