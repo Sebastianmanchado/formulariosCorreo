@@ -763,7 +763,11 @@ function EvaluacionEconomicaSection() {
             <NumberInputControlled name="caratula.evaluacion.tasaCorte" decimals={2} />
           </Field>
           <Field label="VAN (M$ o USD según moneda ingresada)" orientation="column">
-            <MoneyInput control={control} name="caratula.evaluacion.van" />
+            <MoneyInput
+              control={control}
+              name="caratula.evaluacion.van"
+              textAlign="left"
+            />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.periodoRepagoMeses" />

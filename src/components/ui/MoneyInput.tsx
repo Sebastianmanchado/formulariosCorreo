@@ -23,6 +23,7 @@ type InnerProps = {
   /** Coordenadas para useGridNavigation (opcional). */
   gridRow?: number;
   gridCol?: number;
+  textAlign?: 'left' | 'right';
 };
 
 /**
@@ -43,6 +44,7 @@ function MoneyInputInner({
   id,
   gridRow,
   gridCol,
+  textAlign = 'right',
 }: InnerProps) {
   const [focused, setFocused] = useState(false);
   const [raw, setRaw] = useState<string>(() =>
@@ -103,7 +105,7 @@ function MoneyInputInner({
           setRaw(v);
           onChange(parseMoney(v));
         }}
-        className={`w-full rounded-sm border border-border-input bg-white px-2 py-1.5 text-right font-mono text-[12px] tabular-nums text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-section disabled:text-ink-muted ${
+        className={`w-full rounded-sm border border-border-input bg-white px-2 py-1.5 ${textAlign === 'left' ? 'text-left' : 'text-right'} font-mono text-[12px] tabular-nums text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-section disabled:text-ink-muted ${
           suffix ? 'pr-10' : ''
         } ${inputClassName}`}
       />
@@ -127,6 +129,7 @@ type Props<T extends FieldValues> = {
   id?: string;
   gridRow?: number;
   gridCol?: number;
+  textAlign?: 'left' | 'right';
   /**
    * Forzar el input a una moneda fija, ignorando el toggle global. Útil para
    * la cotización USD (siempre en pesos).
