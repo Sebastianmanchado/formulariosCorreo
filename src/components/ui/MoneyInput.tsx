@@ -135,6 +135,11 @@ type Props<T extends FieldValues> = {
    * la cotización USD (siempre en pesos).
    */
   fixedCurrency?: 'pesos';
+  /**
+   * No convierte entre m$ almacenados y USD según cotización: muestra y guarda
+   * el valor tal cual lo ingresa el usuario (p. ej. VAN en M$ o USD).
+   */
+  noConversion?: boolean;
 };
 
 /**
@@ -143,11 +148,13 @@ type Props<T extends FieldValues> = {
  *  • En modo `usd`: el valor se muestra como USD (equivalente del m$ guardado
  *    con la cotización) y se reconvierte a m$ al editar.
  *  • Si `fixedCurrency="pesos"` se pasa, siempre se comporta como pesos.
+ *  • Si `noConversion` es true, no aplica conversión USD ↔ m$ (valor crudo).
  */
 export function MoneyInput<T extends FieldValues>({
   control,
   name,
   fixedCurrency,
+  noConversion = false,
   suffix,
   ...rest
 }: Props<T>) {
@@ -168,6 +175,7 @@ export function MoneyInput<T extends FieldValues>({
   const cotizacionValida =
     typeof cotizacion === 'number' && cotizacion > 0 && Number.isFinite(cotizacion);
   const modeUsd =
+    !noConversion &&
     fixedCurrency !== 'pesos' &&
     monedaEntrada === 'usd' &&
     cotizacionValida;

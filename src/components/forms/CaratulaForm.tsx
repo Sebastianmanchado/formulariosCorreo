@@ -767,6 +767,7 @@ function EvaluacionEconomicaSection() {
               control={control}
               name="caratula.evaluacion.van"
               textAlign="left"
+              noConversion
             />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
