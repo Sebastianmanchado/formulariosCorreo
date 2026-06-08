@@ -3,7 +3,7 @@ import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import { MODALIDADES_EVALUACION, TIPOS_EROGACION } from '../../data/constants';
 import { DESCRIPCION_MAX, type Proyecto } from '../../schemas/proyecto';
 import { useCalculatedTotals } from '../../hooks/useCalculatedTotals';
-import { formatMoneyZero, formatUsdFromMiles, todayISO } from '../../utils/formatters';
+import { formatMoneyZero, formatUsdFromMiles, parseMoney, todayISO } from '../../utils/formatters';
 import {
   CalculatedField,
   Card,
@@ -132,12 +132,15 @@ function CotizacionInput() {
         value={text}
         onFocus={(e) => {
           setFocused(true);
+          // Mostrar el número sin separadores de miles para edición cómoda.
+          if (formValue !== null && formValue !== undefined) {
+            setText(String(formValue).replace('.', ','));
+          }
           e.currentTarget.select();
         }}
         onBlur={() => {
           setFocused(false);
-          // Al perder foco, reformateamos el texto desde el form value real
-          // para limpiar separadores colgados ("1180," → "1180").
+          // Al perder foco, reformateamos con separadores de miles.
           setText(formatLocalNumber(formValue));
         }}
         onChange={(e) => {
@@ -146,19 +149,11 @@ function CotizacionInput() {
           if (!/^-?[\d.,]*$/.test(v)) return;
           setText(v);
 
-          // Parseo: coma → punto, intentamos Number().
-          const normalized = v.replace(',', '.');
-          let next: number | undefined;
-          if (normalized === '' || normalized === '-' || normalized === '.') {
-            next = undefined;
-          } else {
-            const num = Number(normalized);
-            // `Number("1180.") === 1180` (válido). NaN sólo cuando es basura
-            // tipo "1.2.3" — en ese caso ignoramos el cambio para no perder
-            // el form value previo.
-            if (Number.isNaN(num)) return;
-            next = num;
-          }
+          // Parseo tolerante: acepta "1180", "1180,5", "1.180,50".
+          const next = parseMoney(v);
+          // Si parseMoney devuelve undefined con input no-vacío, el usuario
+          // está en medio de un ingreso inválido — no modificamos el form value.
+          if (next === undefined && v.trim() !== '' && v.trim() !== '-') return;
           lastSelfWroteRef.current = next;
           setValue('caratula.cotizacionUsd', next, { shouldDirty: true });
         }}
@@ -171,10 +166,10 @@ function CotizacionInput() {
   );
 }
 
-/** Formato local AR: punto decimal → coma. No agrega separador de miles. */
+/** Formato local AR: separador de miles punto, decimal coma. */
 function formatLocalNumber(n: number | null | undefined): string {
   if (n === undefined || n === null || Number.isNaN(n)) return '';
-  return String(n).replace('.', ',');
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
@@ -432,19 +427,19 @@ function ResumenMontosSection() {
           <thead>
             <tr>
               <th className="w-[38%] border border-accent-light bg-accent px-2 py-1.5 text-left text-[11px] font-semibold text-white">
-                Concepto <span className="font-normal text-white/70">(Millones de Pesos)</span>
+                Concepto <span className="font-normal text-white/70">(M$)</span>
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Año actual (Millones de Pesos)
+                Ej. Actual (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Años siguientes (Millones de Pesos)
+                Ej. Siguientes (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Total (Millones de Pesos)
+                Total (M$)
               </th>
               <th className="border border-accent-light bg-accent px-2 py-1.5 text-center text-[11px] font-semibold text-white">
-                Previsto en Presupuesto (Millones de Pesos)
+                Previsto (M$)
               </th>
             </tr>
           </thead>
@@ -749,6 +744,7 @@ function InfoTISection() {
 
 // ─── B. Evaluación económica ────────────────────────────────────────────────
 function EvaluacionEconomicaSection() {
+  const { control } = useFormContext<Proyecto>();
   return (
     <>
       <SectionTitle>B. Resultados de la Evaluación Económica</SectionTitle>
@@ -766,8 +762,8 @@ function EvaluacionEconomicaSection() {
           <Field label="Tasa de corte %" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.tasaCorte" />
           </Field>
-          <Field label="VAN, en Millones de Pesos o USD según moneda ingresada" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.van" />
+          <Field label="VAN (M$ o USD según moneda ingresada)" orientation="column">
+            <MoneyInput control={control} name="caratula.evaluacion.van" fixedCurrency="pesos" />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.periodoRepagoMeses" />
@@ -900,7 +896,7 @@ function TotalRow({
     >
       <div className="grid grid-cols-[1fr_170px] items-center gap-3">
         <span className={`text-[12px] ${weight}`}>
-          {label} <span className="font-normal text-ink-muted">(Millones de Pesos)</span>
+          {label} <span className="font-normal text-ink-muted">(M$)</span>
         </span>
         <CalculatedField value={value} emphasis={emphasis} />
       </div>

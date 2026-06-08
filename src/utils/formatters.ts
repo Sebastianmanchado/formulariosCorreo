@@ -11,8 +11,8 @@ const AR_LOCALE = 'es-AR';
  * Los USD son valores absolutos (USD totales, no miles).
  */
 
-/** Máximo de decimales para pesos (no redondear resultados). */
-const PESOS_MAX_FRACTION = 4;
+/** Máximo de decimales para pesos — 2 evita mostrar fracciones insignificantes. */
+const PESOS_MAX_FRACTION = 2;
 /** Máximo de decimales para USD (típico en USD). */
 const USD_MAX_FRACTION = 2;
 
@@ -49,14 +49,18 @@ export function parseMoney(raw: string | null | undefined): number | undefined {
 
   // Detectar formato: si tiene coma y punto, asumimos es-AR ("1.234,56").
   // Si solo tiene coma, asumimos que la coma es el separador decimal.
-  // Si solo tiene punto, respetamos el punto como decimal.
+  // Si tiene múltiples puntos sin coma, todos son separadores de miles ("1.234.567").
+  // Si solo tiene un punto, es separador decimal.
   let cleaned = trimmed;
   const hasComma = cleaned.includes(',');
   const hasDot = cleaned.includes('.');
+  const dotCount = (cleaned.match(/\./g) ?? []).length;
   if (hasComma && hasDot) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (hasComma) {
     cleaned = cleaned.replace(',', '.');
+  } else if (dotCount > 1) {
+    cleaned = cleaned.replace(/\./g, '');
   }
   cleaned = cleaned.replace(/[^\d.\-]/g, '');
   const n = parseFloat(cleaned);

@@ -75,6 +75,7 @@ function MoneyInputInner({
         ? raw
         : formatMoney(value);
 
+
   return (
     <div className={`relative inline-flex w-full items-center ${className}`}>
       <input
@@ -88,7 +89,8 @@ function MoneyInputInner({
         value={display}
         onFocus={(e) => {
           setFocused(true);
-          setRaw(value === null || value === undefined ? '' : String(value));
+          // Mostrar valor formateado con separadores al enfocar para facilitar lectura
+          setRaw(value === null || value === undefined ? '' : formatMoney(value));
           e.currentTarget.select();
         }}
         onBlur={() => {
@@ -174,10 +176,12 @@ export function MoneyInput<T extends FieldValues>({
       render={({ field }) => {
         const stored = field.value as number | null | undefined;
 
+        // En modo USD: convertir m$ → USD y redondear a 2 decimales para
+        // evitar mostrar artefactos de punto flotante (ej. 4341.864406779661).
         const displayValue: number | null | undefined = modeUsd
           ? stored === null || stored === undefined
             ? stored
-            : (stored * 1_000_000) / (cotizacion as number)
+            : parseFloat(((stored * 1_000_000) / (cotizacion as number)).toFixed(2))
           : stored;
 
         const handleChange = (next: number | undefined) => {

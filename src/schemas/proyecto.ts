@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { todayISO } from '../utils/formatters';
 
 /**
- * Monto en miles de pesos (m$). El valor puede quedar vacío mientras el usuario
+ * Monto en millones de pesos (m$). El valor puede quedar vacío mientras el usuario
  * completa el formulario — preprocesamos "" → undefined para que Zod lo acepte.
  */
 const moneyField = z.preprocess(

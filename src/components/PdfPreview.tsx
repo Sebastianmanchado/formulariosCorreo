@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, type ReactNode, type CSSProperties } from 'react';
+import { createContext, forwardRef, useContext, useMemo, type ReactNode, type CSSProperties } from 'react';
 import {
   AUTORIZACIONES,
   CORREO_AMARILLO,
@@ -18,11 +18,13 @@ import {
 import {
   MESES_KEYS,
   MESES_LABELS,
+  type ArchivoMeta,
   type FilaAnexo,
   type Proyecto,
 } from '../schemas/proyecto';
 import {
   formatDateAR,
+  formatMoney,
   formatMoneyZero,
   formatMonth,
   formatPercent,
@@ -30,6 +32,9 @@ import {
   formatUsdFromMilesRounded,
   monthYearShort,
 } from '../utils/formatters';
+
+/** Formatea un monto en M$ según la moneda del PDF. Default: millones de pesos. */
+const PdfFmtCtx = createContext<(v: number) => string>(formatMoneyZero);
 
 type Orientation = 'portrait' | 'landscape';
 
@@ -138,6 +143,10 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     const proyectoNombre =
       values.caratula?.descripcion?.denominacion?.trim() || undefined;
     const cotizacionRef = values.caratula?.cotizacionUsd;
+    const isUsd =
+      values.caratula?.monedaEntrada === 'usd' &&
+      typeof cotizacionRef === 'number' &&
+      cotizacionRef > 0;
 
     const anxMeta: Record<AnexoSectionKey, string> = {
       hardware: 'a1.1 — Detalle de Hardware',
@@ -156,6 +165,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
         rowTotals={totalesAnexos.sections[key].rowTotals}
         colTotals={totalesAnexos.sections[key].colTotals}
         cotizacion={cotizacionRef}
+        isUsd={isUsd}
       />
     );
 
@@ -168,7 +178,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
         key: 'anexos-grp-1',
         orientation: 'landscape',
         content: (
-          <AnexosGroupPage proyecto={proyectoNombre}>
+          <AnexosGroupPage proyecto={proyectoNombre} isUsd={isUsd}>
             {renderBlock('hardware')}
             {renderBlock('software')}
           </AnexosGroupPage>
@@ -189,13 +199,14 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
         key: 'anexos-grp-2',
         orientation: 'landscape',
         content: (
-          <AnexosGroupPage proyecto={proyectoNombre}>
+          <AnexosGroupPage proyecto={proyectoNombre} isUsd={isUsd}>
             {renderBlock('desarrollosExternos')}
             {renderBlock('otrosTecnologicos')}
             {hasAnyTech && (
               <AnexosTecnologicosBlock
                 col={totalesAnexos.totalTecnologicos}
                 cotizacion={cotizacionRef}
+                isUsd={isUsd}
               />
             )}
           </AnexosGroupPage>
@@ -209,7 +220,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
         key: 'anexos-grp-3',
         orientation: 'landscape',
         content: (
-          <AnexosGroupPage proyecto={proyectoNombre}>
+          <AnexosGroupPage proyecto={proyectoNombre} isUsd={isUsd}>
             {renderBlock('bienesUso')}
             {renderBlock('obras')}
           </AnexosGroupPage>
@@ -631,7 +642,7 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
         />
         <KVBlock label="Descripción" fill>
           <Paragraph text={c?.descripcion?.descripcion} />
-          <AnexoFlag on={c?.descripcion?.descripcionIncluyeAnexo} />
+          <AnexoFlag on={c?.descripcion?.descripcionIncluyeAnexo} files={c?.descripcion?.descripcionAnexos} />
         </KVBlock>
       </KV>
     </>
@@ -647,7 +658,7 @@ function CaratulaPage1b({ values }: { values: Proyecto }) {
       <KV fill>
         <KVBlock label="Objetivos y justificación" fill>
           <Paragraph text={c?.descripcion?.objetivos} />
-          <AnexoFlag on={c?.descripcion?.objetivosIncluyeAnexo} />
+          <AnexoFlag on={c?.descripcion?.objetivosIncluyeAnexo} files={c?.descripcion?.objetivosAnexos} />
         </KVBlock>
         <KVRow
           label="Tipo de erogación"
@@ -670,6 +681,7 @@ function CaratulaPage2({
   totales: ReturnType<typeof computeTotales>;
 }) {
   const c = values.caratula;
+  const isUsd = c?.monedaEntrada === 'usd';
   return (
     <>
       <PageHeadingRow tag="①" title="Carátula" />
@@ -721,139 +733,116 @@ function CaratulaPage2({
         </span>
         <span style={{ fontSize: '8pt', color: '#6b6158' }}>pesos / USD</span>
       </div>
-      <Note>Importes en millones de pesos.</Note>
-      <table style={tableBase}>
-        <thead>
-          <tr>
-            <Th align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(Millones de Pesos)</span>
-            </Th>
-            <Th>Año actual</Th>
-            <Th>Años siguientes</Th>
-            <Th>Total</Th>
-            <Th>Presupuesto</Th>
-          </tr>
-        </thead>
-        <tbody>
-          <ResumenRow
-            label="Ingresos / Ahorros incrementales del proyecto"
-            fila={c?.resumenMontos?.ingresosAhorros}
-            total={totales.resumen.ingresosAhorrosTotal}
-          />
-          <ResumenRow
-            label="Egresos activables (hard, soft, bienes de uso)"
-            fila={c?.resumenMontos?.egresosActivables}
-            total={totales.resumen.egresosActivablesTotal}
-          />
-          <ResumenRow
-            label="Otros egresos activables"
-            fila={c?.resumenMontos?.otrosEgresosActivables}
-            total={totales.resumen.otrosEgresosActivablesTotal}
-          />
-          <ResumenRow
-            label="Gastos adic. no activables"
-            fila={c?.resumenMontos?.gastosNoActivables}
-            total={totales.resumen.gastosNoActivablesTotal}
-          />
-          <tr>
-            <Td style={tdTotalCaratula}>
-              Monto total de la erogación (activable + no activable)
-            </Td>
-            <Td num strong>
-              {formatMoneyZero(totales.resumen.montoTotalEjActual)}
-            </Td>
-            <Td num strong>
-              {formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}
-            </Td>
-            <Td num strong>
-              {formatMoneyZero(totales.resumen.montoTotalTotal)}
-            </Td>
-            <Td num strong>
-              {formatMoneyZero(totales.resumen.montoTotalPrevisto)}
-            </Td>
-          </tr>
-          <ResumenRow
-            label="Gastos incrementales corrientes"
-            fila={c?.resumenMontos?.gastosIncrementales}
-            total={totales.resumen.gastosIncrementalesTotal}
-          />
-        </tbody>
-      </table>
+      <Note>Importes en {isUsd ? 'USD (moneda de ingreso)' : 'Millones de Pesos (M$)'}. Se incluye equivalente en {isUsd ? 'M$' : 'USD'} como referencia.</Note>
 
-      {/* Tabla espejo en USD */}
-      <div
-        style={{
-          marginTop: '3mm',
-          marginBottom: '1.5mm',
-          fontSize: '7.5pt',
-          color: '#6b6158',
-          fontStyle: 'italic',
-        }}
-      >
-        Equivalente en USD — calculado sobre la cotización ingresada.
+      {/* Tabla principal — moneda de ingreso */}
+      {isUsd ? (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <ThUsd align="left" width="38%">
+                Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
+              </ThUsd>
+              <ThUsd>Ej. Actual</ThUsd>
+              <ThUsd>Ej. Siguientes</ThUsd>
+              <ThUsd>Total</ThUsd>
+              <ThUsd>Presupuesto</ThUsd>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRowUsd label="Ingresos / Ahorros incrementales del proyecto" fila={c?.resumenMontos?.ingresosAhorros} total={totales.resumen.ingresosAhorrosTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Egresos activables (hard, soft, bienes de uso)" fila={c?.resumenMontos?.egresosActivables} total={totales.resumen.egresosActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Otros egresos activables" fila={c?.resumenMontos?.otrosEgresosActivables} total={totales.resumen.otrosEgresosActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <tr>
+              <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
+            </tr>
+            <ResumenRowUsd label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} cotizacion={c?.cotizacionUsd} />
+          </tbody>
+        </table>
+      ) : (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <Th align="left" width="38%">Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(M$)</span></Th>
+              <Th>Ej. Actual</Th>
+              <Th>Ej. Siguientes</Th>
+              <Th>Total</Th>
+              <Th>Presupuesto</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRow label="Ingresos / Ahorros incrementales del proyecto" fila={c?.resumenMontos?.ingresosAhorros} total={totales.resumen.ingresosAhorrosTotal} />
+            <ResumenRow label="Egresos activables (hard, soft, bienes de uso)" fila={c?.resumenMontos?.egresosActivables} total={totales.resumen.egresosActivablesTotal} />
+            <ResumenRow label="Otros egresos activables" fila={c?.resumenMontos?.otrosEgresosActivables} total={totales.resumen.otrosEgresosActivablesTotal} />
+            <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
+            <tr>
+              <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+            </tr>
+            <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
+          </tbody>
+        </table>
+      )}
+
+      {/* Tabla referencia — moneda opuesta */}
+      <div style={{ marginTop: '3mm', marginBottom: '1.5mm', fontSize: '7.5pt', color: '#6b6158', fontStyle: 'italic' }}>
+        {isUsd ? 'Referencia en Millones de Pesos (M$)' : 'Equivalente en USD — calculado sobre la cotización ingresada.'}
       </div>
-      <table style={tableBase}>
-        <thead>
-          <tr>
-            <ThUsd align="left" width="38%">
-              Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span>
-            </ThUsd>
-            <ThUsd>Año actual</ThUsd>
-            <ThUsd>Años siguientes</ThUsd>
-            <ThUsd>Total</ThUsd>
-            <ThUsd>Presupuesto</ThUsd>
-          </tr>
-        </thead>
-        <tbody>
-          <ResumenRowUsd
-            label="Ingresos / Ahorros incrementales del proyecto"
-            fila={c?.resumenMontos?.ingresosAhorros}
-            total={totales.resumen.ingresosAhorrosTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Egresos activables (hard, soft, bienes de uso)"
-            fila={c?.resumenMontos?.egresosActivables}
-            total={totales.resumen.egresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Otros egresos activables"
-            fila={c?.resumenMontos?.otrosEgresosActivables}
-            total={totales.resumen.otrosEgresosActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <ResumenRowUsd
-            label="Gastos adic. no activables"
-            fila={c?.resumenMontos?.gastosNoActivables}
-            total={totales.resumen.gastosNoActivablesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <tr>
-            <Td style={tdTotalCaratula}>
-              Monto total de la erogación (activable + no activable)
-            </Td>
-            <Td num strong>
-              {formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
-            </Td>
-            <Td num strong>
-              {formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
-            </Td>
-          </tr>
-          <ResumenRowUsd
-            label="Gastos incrementales corrientes"
-            fila={c?.resumenMontos?.gastosIncrementales}
-            total={totales.resumen.gastosIncrementalesTotal}
-            cotizacion={c?.cotizacionUsd}
-          />
-        </tbody>
-      </table>
+      {isUsd ? (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <Th align="left" width="38%">Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(M$)</span></Th>
+              <Th>Ej. Actual</Th><Th>Ej. Siguientes</Th><Th>Total</Th><Th>Presupuesto</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRow label="Ingresos / Ahorros incrementales del proyecto" fila={c?.resumenMontos?.ingresosAhorros} total={totales.resumen.ingresosAhorrosTotal} />
+            <ResumenRow label="Egresos activables (hard, soft, bienes de uso)" fila={c?.resumenMontos?.egresosActivables} total={totales.resumen.egresosActivablesTotal} />
+            <ResumenRow label="Otros egresos activables" fila={c?.resumenMontos?.otrosEgresosActivables} total={totales.resumen.otrosEgresosActivablesTotal} />
+            <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
+            <tr>
+              <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+            </tr>
+            <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
+          </tbody>
+        </table>
+      ) : (
+        <table style={tableBase}>
+          <thead>
+            <tr>
+              <ThUsd align="left" width="38%">Concepto <span style={{ fontWeight: 400, opacity: 0.75 }}>(USD)</span></ThUsd>
+              <ThUsd>Ej. Actual</ThUsd><ThUsd>Ej. Siguientes</ThUsd><ThUsd>Total</ThUsd><ThUsd>Presupuesto</ThUsd>
+            </tr>
+          </thead>
+          <tbody>
+            <ResumenRowUsd label="Ingresos / Ahorros incrementales del proyecto" fila={c?.resumenMontos?.ingresosAhorros} total={totales.resumen.ingresosAhorrosTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Egresos activables (hard, soft, bienes de uso)" fila={c?.resumenMontos?.egresosActivables} total={totales.resumen.egresosActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Otros egresos activables" fila={c?.resumenMontos?.otrosEgresosActivables} total={totales.resumen.otrosEgresosActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <ResumenRowUsd label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} cotizacion={c?.cotizacionUsd} />
+            <tr>
+              <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
+            </tr>
+            <ResumenRowUsd label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} cotizacion={c?.cotizacionUsd} />
+          </tbody>
+        </table>
+      )}
     </>
   );
 }
@@ -866,58 +855,64 @@ function CaratulaPage3({
   totales: ReturnType<typeof computeTotales>;
 }) {
   const c = values.caratula;
+  const isUsd = c?.monedaEntrada === 'usd';
+  const cot = c?.cotizacionUsd;
+
+  // Renderiza una línea de ítem en la moneda seleccionada + referencia opuesta
+  const ItemLine = ({ label, v }: { label: string; v: number | null | undefined }) =>
+    isUsd ? (
+      <MoneyLineUsd label={label} v={v} cotizacion={cot} />
+    ) : (
+      <MoneyLine label={label} v={v} />
+    );
+
   return (
     <>
       <PageHeadingRow tag="①" title="Carátula" />
       <SectionTitle>Detalle del Monto Total a Invertir (en moneda ingresada)</SectionTitle>
       <Grid cols="1fr 1fr">
         <Box title="Activable">
-          <MoneyLine label="1. Hardware" v={c?.detalleInversion?.activable?.hardware} />
-          <MoneyLine label="2. Software" v={c?.detalleInversion?.activable?.software} />
-          <MoneyLine label="3. Otros" v={c?.detalleInversion?.activable?.otros} />
-          <MoneyLine
-            label="Total activable (Millones de Pesos)"
-            v={totales.detalle.totalActivable}
-            total
-          />
-          <MoneyLineUsd
-            label="Total activable (USD)"
-            v={totales.detalle.totalActivable}
-            cotizacion={c?.cotizacionUsd}
-          />
+          <ItemLine label="1. Hardware" v={c?.detalleInversion?.activable?.hardware} />
+          <ItemLine label="2. Software" v={c?.detalleInversion?.activable?.software} />
+          <ItemLine label="3. Otros" v={c?.detalleInversion?.activable?.otros} />
+          {isUsd ? (
+            <>
+              <MoneyLineUsd label="Total activable (USD)" v={totales.detalle.totalActivable} cotizacion={cot} emphasize={false} />
+              <MoneyLine label="Total activable (M$)" v={totales.detalle.totalActivable} total />
+            </>
+          ) : (
+            <>
+              <MoneyLine label="Total activable (M$)" v={totales.detalle.totalActivable} total />
+              <MoneyLineUsd label="Total activable (USD)" v={totales.detalle.totalActivable} cotizacion={cot} />
+            </>
+          )}
 
           <Subheader>No activable</Subheader>
           {(c?.detalleInversion?.noActivable ?? []).length === 0 && (
             <EmptyNote>Sin conceptos cargados.</EmptyNote>
           )}
           {(c?.detalleInversion?.noActivable ?? []).map((it, i) => (
-            <MoneyLine
+            <ItemLine
               key={it.id ?? i}
               label={it.concepto?.trim() || `Concepto ${i + 1}`}
               v={it.monto}
             />
           ))}
-          <MoneyLine
-            label="Total no activable (Millones de Pesos)"
-            v={totales.detalle.totalNoActivable}
-            total
-          />
-          <MoneyLineUsd
-            label="Total no activable (USD)"
-            v={totales.detalle.totalNoActivable}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <MoneyLine
-            label="Total costo de la erogación (Millones de Pesos)"
-            v={totales.detalle.totalInversion}
-            emphasize
-          />
-          <MoneyLineUsd
-            label="Total costo de la erogación (USD)"
-            v={totales.detalle.totalInversion}
-            cotizacion={c?.cotizacionUsd}
-            emphasize
-          />
+          {isUsd ? (
+            <>
+              <MoneyLineUsd label="Total no activable (USD)" v={totales.detalle.totalNoActivable} cotizacion={cot} />
+              <MoneyLine label="Total no activable (M$)" v={totales.detalle.totalNoActivable} total />
+              <MoneyLineUsd label="Total costo de la erogación (USD)" v={totales.detalle.totalInversion} cotizacion={cot} emphasize />
+              <MoneyLine label="Total costo de la erogación (M$)" v={totales.detalle.totalInversion} emphasize />
+            </>
+          ) : (
+            <>
+              <MoneyLine label="Total no activable (M$)" v={totales.detalle.totalNoActivable} total />
+              <MoneyLineUsd label="Total no activable (USD)" v={totales.detalle.totalNoActivable} cotizacion={cot} />
+              <MoneyLine label="Total costo de la erogación (M$)" v={totales.detalle.totalInversion} emphasize />
+              <MoneyLineUsd label="Total costo de la erogación (USD)" v={totales.detalle.totalInversion} cotizacion={cot} emphasize />
+            </>
+          )}
         </Box>
 
         <Box title="Gastos Incrementales Corrientes">
@@ -925,67 +920,63 @@ function CaratulaPage3({
             <EmptyNote>Sin conceptos cargados.</EmptyNote>
           )}
           {(c?.detalleInversion?.gastosIncrementales ?? []).map((it, i) => (
-            <MoneyLine
+            <ItemLine
               key={it.id ?? i}
               label={it.concepto?.trim() || `Concepto ${i + 1}`}
               v={it.monto}
             />
           ))}
-          <MoneyLine
-            label="Total gastos incrementales corrientes (Millones de Pesos)"
-            v={totales.detalle.totalGastosIncrementales}
-            total
-          />
-          <MoneyLineUsd
-            label="Total gastos incrementales corrientes (USD)"
-            v={totales.detalle.totalGastosIncrementales}
-            cotizacion={c?.cotizacionUsd}
-          />
+          {isUsd ? (
+            <>
+              <MoneyLineUsd label="Total gastos incrementales (USD)" v={totales.detalle.totalGastosIncrementales} cotizacion={cot} />
+              <MoneyLine label="Total gastos incrementales (M$)" v={totales.detalle.totalGastosIncrementales} total />
+            </>
+          ) : (
+            <>
+              <MoneyLine label="Total gastos incrementales (M$)" v={totales.detalle.totalGastosIncrementales} total />
+              <MoneyLineUsd label="Total gastos incrementales (USD)" v={totales.detalle.totalGastosIncrementales} cotizacion={cot} />
+            </>
+          )}
         </Box>
       </Grid>
 
       <SectionTitle>Información Complementaria sobre Proyectos Informáticos</SectionTitle>
       <Grid cols="1fr 1fr">
         <Box title="Costos de Hardware">
-          <MoneyLine label="1. Costo de equipos informáticos" v={c?.infoTI?.hardware?.equipos} />
-          <MoneyLine label="2. Costos de instalación" v={c?.infoTI?.hardware?.instalacion} />
-          <MoneyLine label="3. Otros costos" v={c?.infoTI?.hardware?.otros} />
-          <MoneyLine
-            label="Total costos Hardware (Millones de Pesos)"
-            v={totales.ti.totalHardware}
-            total
-          />
-          <MoneyLineUsd
-            label="Total costos Hardware (USD)"
-            v={totales.ti.totalHardware}
-            cotizacion={c?.cotizacionUsd}
-          />
+          <ItemLine label="1. Costo de equipos informáticos" v={c?.infoTI?.hardware?.equipos} />
+          <ItemLine label="2. Costos de instalación" v={c?.infoTI?.hardware?.instalacion} />
+          <ItemLine label="3. Otros costos" v={c?.infoTI?.hardware?.otros} />
+          {isUsd ? (
+            <>
+              <MoneyLineUsd label="Total costos Hardware (USD)" v={totales.ti.totalHardware} cotizacion={cot} />
+              <MoneyLine label="Total costos Hardware (M$)" v={totales.ti.totalHardware} total />
+            </>
+          ) : (
+            <>
+              <MoneyLine label="Total costos Hardware (M$)" v={totales.ti.totalHardware} total />
+              <MoneyLineUsd label="Total costos Hardware (USD)" v={totales.ti.totalHardware} cotizacion={cot} />
+            </>
+          )}
         </Box>
         <Box title="Costos de Software">
-          <MoneyLine label="1. Licencias" v={c?.infoTI?.software?.licencias} />
-          <MoneyLine label="2. Apoyo externo" v={c?.infoTI?.software?.apoyoExterno} />
-          <MoneyLine label="3. Otros costos" v={c?.infoTI?.software?.otros} />
-          <MoneyLine
-            label="Total costos Software (Millones de Pesos)"
-            v={totales.ti.totalSoftware}
-            total
-          />
-          <MoneyLineUsd
-            label="Total costos Software (USD)"
-            v={totales.ti.totalSoftware}
-            cotizacion={c?.cotizacionUsd}
-          />
-          <MoneyLine
-            label="Total Hardware + Software (Millones de Pesos)"
-            v={totales.ti.totalHwSw}
-            emphasize
-          />
-          <MoneyLineUsd
-            label="Total Hardware + Software (USD)"
-            v={totales.ti.totalHwSw}
-            cotizacion={c?.cotizacionUsd}
-            emphasize
-          />
+          <ItemLine label="1. Licencias" v={c?.infoTI?.software?.licencias} />
+          <ItemLine label="2. Apoyo externo" v={c?.infoTI?.software?.apoyoExterno} />
+          <ItemLine label="3. Otros costos" v={c?.infoTI?.software?.otros} />
+          {isUsd ? (
+            <>
+              <MoneyLineUsd label="Total costos Software (USD)" v={totales.ti.totalSoftware} cotizacion={cot} />
+              <MoneyLine label="Total costos Software (M$)" v={totales.ti.totalSoftware} total />
+              <MoneyLineUsd label="Total Hardware + Software (USD)" v={totales.ti.totalHwSw} cotizacion={cot} emphasize />
+              <MoneyLine label="Total Hardware + Software (M$)" v={totales.ti.totalHwSw} emphasize />
+            </>
+          ) : (
+            <>
+              <MoneyLine label="Total costos Software (M$)" v={totales.ti.totalSoftware} total />
+              <MoneyLineUsd label="Total costos Software (USD)" v={totales.ti.totalSoftware} cotizacion={cot} />
+              <MoneyLine label="Total Hardware + Software (M$)" v={totales.ti.totalHwSw} emphasize />
+              <MoneyLineUsd label="Total Hardware + Software (USD)" v={totales.ti.totalHwSw} cotizacion={cot} emphasize />
+            </>
+          )}
         </Box>
       </Grid>
 
@@ -1004,7 +995,7 @@ function CaratulaPage3({
           value={formatPercent(c?.evaluacion?.tasaCorte) || '—'}
         />
         <MiniField
-          label="VAN, en Millones de Pesos o USD según moneda ingresada"
+          label={`VAN (${isUsd ? 'USD' : 'M$'})`}
           value={formatMoneyZero(c?.evaluacion?.van)}
         />
         <MiniField
@@ -1059,11 +1050,18 @@ function DetalleMensualPageA({
   const dm = values.detalleMensual;
   const inv = dm?.inversion;
   const proyecto = values.caratula?.descripcion?.denominacion?.trim() || '—';
+  const isUsd = values.caratula?.monedaEntrada === 'usd';
+  const cotizacion = values.caratula?.cotizacionUsd;
+  const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
+  const fmt = (mills: number): string =>
+    isUsd && cotizacionValida
+      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
+      : formatMoneyZero(mills);
   return (
-    <>
+    <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
+        Importes en {isUsd ? 'USD' : 'Millones de Pesos (M$)'}. Parte{' '}
         <strong>a) Detalle de la Erogación</strong> — el impacto económico se
         muestra en la página siguiente.
       </Note>
@@ -1171,7 +1169,7 @@ function DetalleMensualPageA({
           />
         </tbody>
       </table>
-    </>
+    </PdfFmtCtx.Provider>
   );
 }
 
@@ -1184,11 +1182,18 @@ function DetalleMensualPageB({
 }) {
   const dm = values.detalleMensual;
   const proyecto = values.caratula?.descripcion?.denominacion?.trim() || '—';
+  const isUsd = values.caratula?.monedaEntrada === 'usd';
+  const cotizacion = values.caratula?.cotizacionUsd;
+  const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
+  const fmt = (mills: number): string =>
+    isUsd && cotizacionValida
+      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
+      : formatMoneyZero(mills);
   return (
-    <>
+    <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
       <Note>
-        Importes en Millones de Pesos o USD según moneda seleccionada. Parte{' '}
+        Importes en {isUsd ? 'USD' : 'Millones de Pesos (M$)'}. Parte{' '}
         <strong>b) Impacto Económico de la Erogación</strong> — el detalle de
         la erogación está en la página anterior.
       </Note>
@@ -1229,7 +1234,7 @@ function DetalleMensualPageB({
           />
         </tbody>
       </table>
-    </>
+    </PdfFmtCtx.Provider>
   );
 }
 
@@ -1267,13 +1272,17 @@ function AnexoSubsectionBlock({
   rowTotals,
   colTotals,
   cotizacion,
+  isUsd = false,
 }: {
   title: string;
   filas: FilaAnexo[];
   rowTotals: Record<string, { costoTotal: number; totalAnual: number }>;
   colTotals: AnexoColTotals;
   cotizacion: number | null | undefined;
+  isUsd?: boolean;
 }) {
+  const fmt = (v: number | null | undefined) =>
+    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
   return (
     <>
       <div
@@ -1345,59 +1354,51 @@ function AnexoSubsectionBlock({
                     ? String(f.cantidad)
                     : '—'}
                 </TdS>
-                <TdS num>{formatMoneyZero(f.costoUnitario)}</TdS>
-                <TdS num highlight>
-                  {formatMoneyZero(rt.costoTotal)}
-                </TdS>
+                <TdS num>{fmt(f.costoUnitario)}</TdS>
+                <TdS num highlight>{fmt(rt.costoTotal)}</TdS>
                 {MESES_KEYS.map((m) => (
-                  <TdS key={m} num>
-                    {formatMoneyZero(f.meses?.[m])}
-                  </TdS>
+                  <TdS key={m} num>{fmt(f.meses?.[m] ?? 0)}</TdS>
                 ))}
-                <TdS num highlight>
-                  {formatMoneyZero(rt.totalAnual)}
-                </TdS>
-                <TdS num>{formatMoneyZero(f.anioMas1)}</TdS>
-                <TdS num>{formatMoneyZero(f.anioMas2)}</TdS>
+                <TdS num highlight>{fmt(rt.totalAnual)}</TdS>
+                <TdS num>{fmt(f.anioMas1 ?? 0)}</TdS>
+                <TdS num>{fmt(f.anioMas2 ?? 0)}</TdS>
               </tr>
             );
           })}
           {filas.length > 0 && (
             <>
+              {/* Fila total primaria — moneda de ingreso */}
               <tr>
-                <TdS strong>Total</TdS>
-                <TdS strong />
-                <TdS strong />
-                <TdS num strong>{formatMoneyZero(colTotals.costoTotal)}</TdS>
+                <TdS strong>{isUsd ? 'Total (USD)' : 'Total (M$)'}</TdS>
+                <TdS strong /><TdS strong />
+                <TdS num strong highlight>{fmt(colTotals.costoTotal)}</TdS>
                 {MESES_KEYS.map((m) => (
-                  <TdS key={m} num strong>
-                    {formatMoneyZero(colTotals.meses[m])}
-                  </TdS>
+                  <TdS key={m} num strong>{fmt(colTotals.meses[m])}</TdS>
                 ))}
-                <TdS num strong>{formatMoneyZero(colTotals.totalAnual)}</TdS>
-                <TdS num strong>{formatMoneyZero(colTotals.anioMas1)}</TdS>
-                <TdS num strong>{formatMoneyZero(colTotals.anioMas2)}</TdS>
+                <TdS num strong highlight>{fmt(colTotals.totalAnual)}</TdS>
+                <TdS num strong>{fmt(colTotals.anioMas1)}</TdS>
+                <TdS num strong>{fmt(colTotals.anioMas2)}</TdS>
               </tr>
+              {/* Fila total referencia — moneda opuesta */}
               <tr>
-                <TdS strong highlight>Total (USD)</TdS>
-                <TdS highlight />
-                <TdS highlight />
+                <TdS strong highlight>{isUsd ? 'Total (M$)' : 'Total (USD)'}</TdS>
+                <TdS highlight /><TdS highlight />
                 <TdS num strong highlight>
-                  {formatUsdFromMiles(colTotals.costoTotal, cotizacion)}
+                  {isUsd ? formatMoneyZero(colTotals.costoTotal) : formatUsdFromMiles(colTotals.costoTotal, cotizacion)}
                 </TdS>
                 {MESES_KEYS.map((m) => (
                   <TdS key={m} num strong highlight>
-                    {formatUsdFromMiles(colTotals.meses[m], cotizacion)}
+                    {isUsd ? formatMoneyZero(colTotals.meses[m]) : formatUsdFromMiles(colTotals.meses[m], cotizacion)}
                   </TdS>
                 ))}
                 <TdS num strong highlight>
-                  {formatUsdFromMiles(colTotals.totalAnual, cotizacion)}
+                  {isUsd ? formatMoneyZero(colTotals.totalAnual) : formatUsdFromMiles(colTotals.totalAnual, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {formatUsdFromMiles(colTotals.anioMas1, cotizacion)}
+                  {isUsd ? formatMoneyZero(colTotals.anioMas1) : formatUsdFromMiles(colTotals.anioMas1, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {formatUsdFromMiles(colTotals.anioMas2, cotizacion)}
+                  {isUsd ? formatMoneyZero(colTotals.anioMas2) : formatUsdFromMiles(colTotals.anioMas2, cotizacion)}
                 </TdS>
               </tr>
             </>
@@ -1411,10 +1412,14 @@ function AnexoSubsectionBlock({
 function AnexosTecnologicosBlock({
   col,
   cotizacion,
+  isUsd = false,
 }: {
   col: AnexoColTotals;
   cotizacion: number | null | undefined;
+  isUsd?: boolean;
 }) {
+  const fmt = (v: number | null | undefined) =>
+    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
   return (
     <>
       <div
@@ -1460,40 +1465,38 @@ function AnexosTecnologicosBlock({
           </tr>
         </thead>
         <tbody>
+          {/* Fila primaria — moneda de ingreso */}
           <tr>
-            <TdS strong>Total</TdS>
-            <TdS />
-            <TdS />
-            <TdS num strong>{formatMoneyZero(col.costoTotal)}</TdS>
+            <TdS strong>{isUsd ? 'Total (USD)' : 'Total (M$)'}</TdS>
+            <TdS /><TdS />
+            <TdS num strong>{fmt(col.costoTotal)}</TdS>
             {MESES_KEYS.map((m) => (
-              <TdS key={m} num strong>
-                {formatMoneyZero(col.meses[m])}
-              </TdS>
+              <TdS key={m} num strong>{fmt(col.meses[m])}</TdS>
             ))}
-            <TdS num strong>{formatMoneyZero(col.totalAnual)}</TdS>
-            <TdS num strong>{formatMoneyZero(col.anioMas1)}</TdS>
-            <TdS num strong>{formatMoneyZero(col.anioMas2)}</TdS>
+            <TdS num strong>{fmt(col.totalAnual)}</TdS>
+            <TdS num strong>{fmt(col.anioMas1)}</TdS>
+            <TdS num strong>{fmt(col.anioMas2)}</TdS>
           </tr>
+          {/* Fila referencia — moneda opuesta */}
           <tr>
-            <TdS strong highlight>Total (USD)</TdS>
-            <TdS highlight />
-            <TdS highlight />
+            <TdS strong highlight>{isUsd ? 'Ref. M$' : 'Total (USD)'}</TdS>
+            <TdS highlight /><TdS highlight />
             <TdS num strong highlight>
-              {formatUsdFromMiles(col.costoTotal, cotizacion)}
+              {isUsd ? formatMoneyZero(col.costoTotal) : formatUsdFromMiles(col.costoTotal, cotizacion)}
             </TdS>
             {MESES_KEYS.map((m) => (
               <TdS key={m} num strong highlight>
-                {formatUsdFromMiles(col.meses[m], cotizacion)}
+                {isUsd ? formatMoneyZero(col.meses[m]) : formatUsdFromMiles(col.meses[m], cotizacion)}
               </TdS>
             ))}
             <TdS num strong highlight>
-              {formatUsdFromMiles(col.totalAnual, cotizacion)}
+              {isUsd ? formatMoneyZero(col.totalAnual) : formatUsdFromMiles(col.totalAnual, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {formatUsdFromMiles(col.anioMas1, cotizacion)}
+              {isUsd ? formatMoneyZero(col.anioMas1) : formatUsdFromMiles(col.anioMas1, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {formatUsdFromMiles(col.anioMas2, cotizacion)}
+              {isUsd ? formatMoneyZero(col.anioMas2) : formatUsdFromMiles(col.anioMas2, cotizacion)}
             </TdS>
           </tr>
         </tbody>
@@ -1509,14 +1512,18 @@ function AnexosTecnologicosBlock({
 function AnexosGroupPage({
   proyecto,
   children,
+  isUsd = false,
 }: {
   proyecto: string | undefined;
   children: ReactNode;
+  isUsd?: boolean;
 }) {
   return (
     <>
       <PageHeadingRow tag="③" title={`Anexos — ${proyecto || '—'}`} />
-      <Note>Importes en Millones de Pesos o USD según moneda seleccionada.</Note>
+      <Note>
+        Importes en {isUsd ? 'USD (moneda de ingreso)' : 'Millones de Pesos (M$)'}. Se incluye fila de referencia en {isUsd ? 'M$' : 'USD'}.
+      </Note>
       {children}
     </>
   );
@@ -1851,17 +1858,38 @@ function Paragraph({ text }: { text: string | undefined | null }) {
   return <div style={{ whiteSpace: 'pre-wrap' }}>{t}</div>;
 }
 
-function AnexoFlag({ on }: { on: boolean | undefined }) {
+function AnexoFlag({
+  on,
+  files,
+}: {
+  on: boolean | undefined;
+  files?: ArchivoMeta[];
+}) {
+  const hasFiles = files && files.length > 0;
   return (
-    <div
-      style={{
-        marginTop: '1.5mm',
-        fontSize: '7.5pt',
-        color: on ? '#1a3a5c' : '#6b6158',
-        fontWeight: on ? 600 : 400,
-      }}
-    >
+    <div style={{ marginTop: '1.5mm', fontSize: '7.5pt', color: on ? '#1a3a5c' : '#6b6158', fontWeight: on ? 600 : 400 }}>
       {on ? '☒ Incluye anexo adjunto' : '☐ Sin anexo'}
+      {hasFiles && (
+        <div style={{ marginTop: '1mm', display: 'flex', flexDirection: 'column', gap: '0.5mm' }}>
+          {files!.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                fontSize: '7pt',
+                fontWeight: 400,
+                color: '#1a3a5c',
+                paddingLeft: '3mm',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1.5mm',
+              }}
+            >
+              <span style={{ color: '#4a7ab5' }}>📎</span>
+              <span>{f.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2347,6 +2375,7 @@ function DataBandRow({
     | undefined;
   total: number;
 }) {
+  const fmt = useContext(PdfFmtCtx);
   return (
     <tr>
       <td
@@ -2374,11 +2403,11 @@ function DataBandRow({
       </td>
       {MESES_KEYS.map((m) => (
         <TdS key={m} num>
-          {formatMoneyZero(meses?.[m])}
+          {fmt(meses?.[m] ?? 0)}
         </TdS>
       ))}
       <TdS num highlight>
-        {formatMoneyZero(total)}
+        {fmt(total)}
       </TdS>
     </tr>
   );
@@ -2393,6 +2422,7 @@ function TotalBandRow({
   per: PerColumn;
   strong?: boolean;
 }) {
+  const fmt = useContext(PdfFmtCtx);
   const bg = strong ? '#1a3a5c' : '#e8e0d4';
   const color = strong ? '#ffffff' : '#1a3a5c';
   return (
@@ -2424,7 +2454,7 @@ function TotalBandRow({
             fontWeight: 700,
           }}
         >
-          {formatMoneyZero(per.meses[m])}
+          {fmt(per.meses[m])}
         </td>
       ))}
       <td
@@ -2439,7 +2469,7 @@ function TotalBandRow({
           fontWeight: 700,
         }}
       >
-        {formatMoneyZero(per.anual)}
+        {fmt(per.anual)}
       </td>
     </tr>
   );
@@ -2452,6 +2482,7 @@ function MirrorBandRow({
   label: string;
   per: PerColumn;
 }) {
+  const fmt = useContext(PdfFmtCtx);
   const bg = 'rgba(26,58,92,0.08)';
   return (
     <tr>
@@ -2481,7 +2512,7 @@ function MirrorBandRow({
             fontWeight: 600,
           }}
         >
-          {formatMoneyZero(per.meses[m])}
+          {fmt(per.meses[m])}
         </td>
       ))}
       <td
@@ -2496,7 +2527,7 @@ function MirrorBandRow({
           fontWeight: 700,
         }}
       >
-        {formatMoneyZero(per.anual)}
+        {fmt(per.anual)}
       </td>
     </tr>
   );
