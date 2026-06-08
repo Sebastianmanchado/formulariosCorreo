@@ -15,6 +15,17 @@ const numberField = z.preprocess(
   z.coerce.number().optional()
 );
 
+/** Porcentaje con hasta 2 decimales (TIR, tasa de corte). */
+const percentField = z.preprocess(
+  (v) => (v === '' || v === null ? undefined : v),
+  z.coerce
+    .number()
+    .optional()
+    .transform((n) =>
+      n === undefined ? undefined : Math.round(n * 100) / 100
+    )
+);
+
 const textField = z.string().optional().default('');
 const longTextField = z.string().optional().default('');
 const boolField = z.boolean().optional().default(false);
@@ -171,8 +182,8 @@ const infoTISchema = z.object({
 // ─── B. Evaluación económica ────────────────────────────────────────────────
 const evaluacionSchema = z.object({
   horizonteMeses: numberField,
-  tir: numberField,
-  tasaCorte: numberField,
+  tir: percentField,
+  tasaCorte: percentField,
   van: moneyField,
   periodoRepagoMeses: numberField,
 });

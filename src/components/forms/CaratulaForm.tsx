@@ -757,10 +757,10 @@ function EvaluacionEconomicaSection() {
             <NumberInputControlled name="caratula.evaluacion.horizonteMeses" />
           </Field>
           <Field label="Tasa Interna de Retorno anual (TIR) %" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.tir" decimals />
+            <NumberInputControlled name="caratula.evaluacion.tir" decimals={2} />
           </Field>
           <Field label="Tasa de corte %" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.tasaCorte" decimals />
+            <NumberInputControlled name="caratula.evaluacion.tasaCorte" decimals={2} />
           </Field>
           <Field label="VAN (M$ o USD según moneda ingresada)" orientation="column">
             <MoneyInput control={control} name="caratula.evaluacion.van" />
@@ -821,17 +821,19 @@ function NumberInputControlled({
   decimals = false,
 }: {
   name: FieldPath<Proyecto>;
-  decimals?: boolean;
+  /** `false` = solo enteros; número = máximo de decimales permitidos. */
+  decimals?: false | number;
 }) {
   const { control, setValue } = useFormContext<Proyecto>();
   const formValue = useWatch({ control, name }) as number | null | undefined;
 
-  if (decimals) {
+  if (decimals !== false) {
     return (
       <DecimalNumberInput
         name={name}
         formValue={formValue}
         setValue={setValue}
+        maxFractionDigits={decimals}
       />
     );
   }
@@ -865,21 +867,49 @@ function NumberInputControlled({
 const numberInputClassName =
   'w-full rounded-sm border border-border-input bg-white px-2 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20';
 
-function formatDecimalDisplay(n: number | null | undefined): string {
+function formatDecimalDisplay(
+  n: number | null | undefined,
+  maxFractionDigits: number
+): string {
   if (n === undefined || n === null || Number.isNaN(n)) return '';
-  return String(n).replace('.', ',');
+  return n.toLocaleString('es-AR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxFractionDigits,
+  });
+}
+
+function roundToFractionDigits(n: number, maxFractionDigits: number): number {
+  const factor = 10 ** maxFractionDigits;
+  return Math.round(n * factor) / factor;
+}
+
+/** Cuenta dígitos después del separador decimal (coma o punto). */
+function countDecimalDigits(raw: string): number {
+  const hasComma = raw.includes(',');
+  const hasDot = raw.includes('.');
+  if (hasComma && hasDot) {
+    return raw.split(',').pop()?.replace(/[^\d]/g, '').length ?? 0;
+  }
+  const sep = hasComma ? ',' : hasDot ? '.' : null;
+  if (!sep) return 0;
+  const idx = raw.lastIndexOf(sep);
+  return raw.slice(idx + 1).replace(/[^\d]/g, '').length;
 }
 
 function DecimalNumberInput({
   name,
   formValue,
   setValue,
+  maxFractionDigits,
 }: {
   name: FieldPath<Proyecto>;
   formValue: number | null | undefined;
   setValue: ReturnType<typeof useFormContext<Proyecto>>['setValue'];
+  maxFractionDigits: number;
 }) {
-  const [text, setText] = useState(() => formatDecimalDisplay(formValue));
+  const [text, setText] = useState(() =>
+    formatDecimalDisplay(formValue, maxFractionDigits)
+  );
   const [focused, setFocused] = useState(false);
   const lastSelfWroteRef = useRef(formValue);
 
@@ -889,9 +919,9 @@ function DecimalNumberInput({
     if (formValue === undefined || formValue === null) {
       setText('');
     } else if (!focused) {
-      setText(formatDecimalDisplay(formValue));
+      setText(formatDecimalDisplay(formValue, maxFractionDigits));
     }
-  }, [formValue, focused]);
+  }, [formValue, focused, maxFractionDigits]);
 
   return (
     <input
@@ -904,17 +934,30 @@ function DecimalNumberInput({
       }}
       onBlur={() => {
         setFocused(false);
-        setText(formatDecimalDisplay(formValue));
+        let rounded = formValue;
+        if (typeof formValue === 'number' && Number.isFinite(formValue)) {
+          rounded = roundToFractionDigits(formValue, maxFractionDigits);
+          if (rounded !== formValue) {
+            lastSelfWroteRef.current = rounded;
+            setValue(name, rounded as never, { shouldDirty: true });
+          }
+        }
+        setText(formatDecimalDisplay(rounded, maxFractionDigits));
       }}
       onChange={(e) => {
         const v = e.target.value;
         if (!/^-?[\d.,]*$/.test(v)) return;
+        if (countDecimalDigits(v) > maxFractionDigits) return;
         setText(v);
 
         const next = parseMoney(v);
         if (v.trim() !== '' && next === undefined) return;
-        lastSelfWroteRef.current = next;
-        setValue(name, next as never, { shouldDirty: true });
+        const normalized =
+          next === undefined
+            ? next
+            : roundToFractionDigits(next, maxFractionDigits);
+        lastSelfWroteRef.current = normalized;
+        setValue(name, normalized as never, { shouldDirty: true });
       }}
       className={numberInputClassName}
     />
