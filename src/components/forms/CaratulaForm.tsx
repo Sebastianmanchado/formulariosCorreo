@@ -757,13 +757,13 @@ function EvaluacionEconomicaSection() {
             <NumberInputControlled name="caratula.evaluacion.horizonteMeses" />
           </Field>
           <Field label="Tasa Interna de Retorno anual (TIR) %" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.tir" />
+            <NumberInputControlled name="caratula.evaluacion.tir" decimals />
           </Field>
           <Field label="Tasa de corte %" orientation="column">
-            <NumberInputControlled name="caratula.evaluacion.tasaCorte" />
+            <NumberInputControlled name="caratula.evaluacion.tasaCorte" decimals />
           </Field>
           <Field label="VAN (M$ o USD según moneda ingresada)" orientation="column">
-            <MoneyInput control={control} name="caratula.evaluacion.van" fixedCurrency="pesos" />
+            <MoneyInput control={control} name="caratula.evaluacion.van" />
           </Field>
           <Field label="Período de repago (meses)" orientation="column">
             <NumberInputControlled name="caratula.evaluacion.periodoRepagoMeses" />
@@ -812,34 +812,111 @@ import type { Control } from 'react-hook-form';
  * tiene quirks de browser que en algunos casos hacen que el DOM no se
  * actualice tras `methods.reset(...)`. Usamos un raw `<input>` (sin el
  * wrapper `<Input>`) para descartar cualquier interferencia del forwardRef.
+ *
+ * Con `decimals`, mantiene texto local mientras se tipea (ej. "12,") para
+ * no truncar la parte decimal al instante.
  */
-function NumberInputControlled({ name }: { name: FieldPath<Proyecto> }) {
+function NumberInputControlled({
+  name,
+  decimals = false,
+}: {
+  name: FieldPath<Proyecto>;
+  decimals?: boolean;
+}) {
   const { control, setValue } = useFormContext<Proyecto>();
-  const raw = useWatch({ control, name });
+  const formValue = useWatch({ control, name }) as number | null | undefined;
+
+  if (decimals) {
+    return (
+      <DecimalNumberInput
+        name={name}
+        formValue={formValue}
+        setValue={setValue}
+      />
+    );
+  }
+
   const value =
-    raw === undefined || raw === null || Number.isNaN(raw as number)
+    formValue === undefined || formValue === null || Number.isNaN(formValue)
       ? ''
-      : String(raw);
+      : String(Math.trunc(formValue));
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (!/^-?\d*$/.test(v)) return;
+        if (v === '' || v === '-') {
+          setValue(name, undefined as never, { shouldDirty: true });
+          return;
+        }
+        const num = parseInt(v, 10);
+        if (Number.isNaN(num)) return;
+        setValue(name, num as never, { shouldDirty: true });
+      }}
+      className={numberInputClassName}
+    />
+  );
+}
+
+const numberInputClassName =
+  'w-full rounded-sm border border-border-input bg-white px-2 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20';
+
+function formatDecimalDisplay(n: number | null | undefined): string {
+  if (n === undefined || n === null || Number.isNaN(n)) return '';
+  return String(n).replace('.', ',');
+}
+
+function DecimalNumberInput({
+  name,
+  formValue,
+  setValue,
+}: {
+  name: FieldPath<Proyecto>;
+  formValue: number | null | undefined;
+  setValue: ReturnType<typeof useFormContext<Proyecto>>['setValue'];
+}) {
+  const [text, setText] = useState(() => formatDecimalDisplay(formValue));
+  const [focused, setFocused] = useState(false);
+  const lastSelfWroteRef = useRef(formValue);
+
+  useEffect(() => {
+    if (formValue === lastSelfWroteRef.current) return;
+    lastSelfWroteRef.current = formValue;
+    if (formValue === undefined || formValue === null) {
+      setText('');
+    } else if (!focused) {
+      setText(formatDecimalDisplay(formValue));
+    }
+  }, [formValue, focused]);
 
   return (
     <input
       type="text"
       inputMode="decimal"
-      value={value}
+      value={text}
+      onFocus={(e) => {
+        setFocused(true);
+        e.currentTarget.select();
+      }}
+      onBlur={() => {
+        setFocused(false);
+        setText(formatDecimalDisplay(formValue));
+      }}
       onChange={(e) => {
         const v = e.target.value;
-        // Permitimos sólo dígitos, signo, coma y punto decimal mientras se
-        // tipea. Convertimos coma → punto para parseFloat.
-        const cleaned = v.replace(',', '.');
-        if (cleaned === '' || cleaned === '-') {
-          setValue(name, undefined as never, { shouldDirty: true });
-          return;
-        }
-        const num = Number(cleaned);
-        if (Number.isNaN(num)) return;
-        setValue(name, num as never, { shouldDirty: true });
+        if (!/^-?[\d.,]*$/.test(v)) return;
+        setText(v);
+
+        const next = parseMoney(v);
+        if (v.trim() !== '' && next === undefined) return;
+        lastSelfWroteRef.current = next;
+        setValue(name, next as never, { shouldDirty: true });
       }}
-      className="w-full rounded-sm border border-border-input bg-white px-2 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20"
+      className={numberInputClassName}
     />
   );
 }
