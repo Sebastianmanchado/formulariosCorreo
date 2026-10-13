@@ -24,17 +24,18 @@ import {
 } from '../schemas/proyecto';
 import {
   formatDateAR,
-  formatMoney,
   formatMoneyZero,
   formatMonth,
-  formatPercent,
-  formatUsdFromMiles,
-  formatUsdFromMilesRounded,
+  formatPdfInt,
+  formatPdfIntZero,
+  formatPdfPercentInt,
+  formatPdfUsdInt,
   monthYearShort,
+  toUsd,
 } from '../utils/formatters';
 
-/** Formatea un monto en M$ según la moneda del PDF. Default: millones de pesos. */
-const PdfFmtCtx = createContext<(v: number) => string>(formatMoneyZero);
+/** Formatea un monto en M$ según la moneda del PDF. Default: enteros. */
+const PdfFmtCtx = createContext<(v: number) => string>(formatPdfIntZero);
 
 type Orientation = 'portrait' | 'landscape';
 
@@ -437,16 +438,16 @@ function ResumenEjecutivoPage({
                 Monto total de la erogación (activable + no activable)
               </Td>
               <Td num strong>
-                {formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
+                {formatPdfUsdInt(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
+                {formatPdfUsdInt(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
+                {formatPdfUsdInt(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}
               </Td>
               <Td num strong>
-                {formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
+                {formatPdfUsdInt(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}
               </Td>
             </tr>
             <ResumenRowUsd
@@ -496,16 +497,16 @@ function ResumenEjecutivoPage({
                 Monto total de la erogación (activable + no activable)
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalEjActual)}
+                {formatPdfIntZero(totales.resumen.montoTotalEjActual)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}
+                {formatPdfIntZero(totales.resumen.montoTotalEjSiguientes)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalTotal)}
+                {formatPdfIntZero(totales.resumen.montoTotalTotal)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalPrevisto)}
+                {formatPdfIntZero(totales.resumen.montoTotalPrevisto)}
               </Td>
             </tr>
             <ResumenRow
@@ -756,10 +757,10 @@ function CaratulaPage2({
             <ResumenRowUsd label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} cotizacion={c?.cotizacionUsd} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
             </tr>
             <ResumenRowUsd label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} cotizacion={c?.cotizacionUsd} />
           </tbody>
@@ -782,10 +783,10 @@ function CaratulaPage2({
             <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalPrevisto)}</Td>
             </tr>
             <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
           </tbody>
@@ -811,10 +812,10 @@ function CaratulaPage2({
             <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatPdfIntZero(totales.resumen.montoTotalPrevisto)}</Td>
             </tr>
             <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
           </tbody>
@@ -834,10 +835,10 @@ function CaratulaPage2({
             <ResumenRowUsd label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} cotizacion={c?.cotizacionUsd} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
-              <Td num strong>{formatUsdFromMilesRounded(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalEjActual, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalEjSiguientes, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalTotal, c?.cotizacionUsd)}</Td>
+              <Td num strong>{formatPdfUsdInt(totales.resumen.montoTotalPrevisto, c?.cotizacionUsd)}</Td>
             </tr>
             <ResumenRowUsd label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} cotizacion={c?.cotizacionUsd} />
           </tbody>
@@ -984,23 +985,23 @@ function CaratulaPage3({
       <Grid cols="repeat(2, 1fr)" gap="3mm">
         <MiniField
           label="Horizonte de la evaluación (meses)"
-          value={c?.evaluacion?.horizonteMeses?.toString() || '—'}
+          value={formatPdfInt(c?.evaluacion?.horizonteMeses) || '—'}
         />
         <MiniField
           label="Tasa Interna de Retorno anual (TIR)"
-          value={formatPercent(c?.evaluacion?.tir) || '—'}
+          value={formatPdfPercentInt(c?.evaluacion?.tir) || '—'}
         />
         <MiniField
           label="Tasa de corte"
-          value={formatPercent(c?.evaluacion?.tasaCorte) || '—'}
+          value={formatPdfPercentInt(c?.evaluacion?.tasaCorte) || '—'}
         />
         <MiniField
           label={`VAN (${isUsd ? 'USD' : 'M$'})`}
-          value={formatMoneyZero(c?.evaluacion?.van)}
+          value={formatPdfIntZero(c?.evaluacion?.van)}
         />
         <MiniField
           label="Período de repago (meses)"
-          value={c?.evaluacion?.periodoRepagoMeses?.toString() || '—'}
+          value={formatPdfInt(c?.evaluacion?.periodoRepagoMeses) || '—'}
         />
       </Grid>
     </>
@@ -1053,10 +1054,13 @@ function DetalleMensualPageA({
   const isUsd = values.caratula?.monedaEntrada === 'usd';
   const cotizacion = values.caratula?.cotizacionUsd;
   const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
-  const fmt = (mills: number): string =>
-    isUsd && cotizacionValida
-      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
-      : formatMoneyZero(mills);
+  const fmt = (mills: number): string => {
+    if (isUsd && cotizacionValida) {
+      const usd = toUsd(mills, cotizacion);
+      return usd === null ? '0' : formatPdfIntZero(usd);
+    }
+    return formatPdfIntZero(mills);
+  };
   return (
     <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
@@ -1185,10 +1189,13 @@ function DetalleMensualPageB({
   const isUsd = values.caratula?.monedaEntrada === 'usd';
   const cotizacion = values.caratula?.cotizacionUsd;
   const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
-  const fmt = (mills: number): string =>
-    isUsd && cotizacionValida
-      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
-      : formatMoneyZero(mills);
+  const fmt = (mills: number): string => {
+    if (isUsd && cotizacionValida) {
+      const usd = toUsd(mills, cotizacion);
+      return usd === null ? '0' : formatPdfIntZero(usd);
+    }
+    return formatPdfIntZero(mills);
+  };
   return (
     <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
@@ -1282,7 +1289,7 @@ function AnexoSubsectionBlock({
   isUsd?: boolean;
 }) {
   const fmt = (v: number | null | undefined) =>
-    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
+    isUsd ? formatPdfUsdInt(v, cotizacion) : formatPdfIntZero(v);
   return (
     <>
       <div
@@ -1351,7 +1358,7 @@ function AnexoSubsectionBlock({
                 <TdS>{f.concepto?.trim() || '—'}</TdS>
                 <TdS num>
                   {f.cantidad !== undefined && f.cantidad !== null
-                    ? String(f.cantidad)
+                    ? formatPdfInt(f.cantidad) || '—'
                     : '—'}
                 </TdS>
                 <TdS num>{fmt(f.costoUnitario)}</TdS>
@@ -1384,21 +1391,21 @@ function AnexoSubsectionBlock({
                 <TdS strong highlight>{isUsd ? 'Total (M$)' : 'Total (USD)'}</TdS>
                 <TdS highlight /><TdS highlight />
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.costoTotal) : formatUsdFromMiles(colTotals.costoTotal, cotizacion)}
+                  {isUsd ? formatPdfIntZero(colTotals.costoTotal) : formatPdfUsdInt(colTotals.costoTotal, cotizacion)}
                 </TdS>
                 {MESES_KEYS.map((m) => (
                   <TdS key={m} num strong highlight>
-                    {isUsd ? formatMoneyZero(colTotals.meses[m]) : formatUsdFromMiles(colTotals.meses[m], cotizacion)}
+                    {isUsd ? formatPdfIntZero(colTotals.meses[m]) : formatPdfUsdInt(colTotals.meses[m], cotizacion)}
                   </TdS>
                 ))}
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.totalAnual) : formatUsdFromMiles(colTotals.totalAnual, cotizacion)}
+                  {isUsd ? formatPdfIntZero(colTotals.totalAnual) : formatPdfUsdInt(colTotals.totalAnual, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.anioMas1) : formatUsdFromMiles(colTotals.anioMas1, cotizacion)}
+                  {isUsd ? formatPdfIntZero(colTotals.anioMas1) : formatPdfUsdInt(colTotals.anioMas1, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.anioMas2) : formatUsdFromMiles(colTotals.anioMas2, cotizacion)}
+                  {isUsd ? formatPdfIntZero(colTotals.anioMas2) : formatPdfUsdInt(colTotals.anioMas2, cotizacion)}
                 </TdS>
               </tr>
             </>
@@ -1419,7 +1426,7 @@ function AnexosTecnologicosBlock({
   isUsd?: boolean;
 }) {
   const fmt = (v: number | null | undefined) =>
-    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
+    isUsd ? formatPdfUsdInt(v, cotizacion) : formatPdfIntZero(v);
   return (
     <>
       <div
@@ -1482,21 +1489,21 @@ function AnexosTecnologicosBlock({
             <TdS strong highlight>{isUsd ? 'Ref. M$' : 'Total (USD)'}</TdS>
             <TdS highlight /><TdS highlight />
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.costoTotal) : formatUsdFromMiles(col.costoTotal, cotizacion)}
+              {isUsd ? formatPdfIntZero(col.costoTotal) : formatPdfUsdInt(col.costoTotal, cotizacion)}
             </TdS>
             {MESES_KEYS.map((m) => (
               <TdS key={m} num strong highlight>
-                {isUsd ? formatMoneyZero(col.meses[m]) : formatUsdFromMiles(col.meses[m], cotizacion)}
+                {isUsd ? formatPdfIntZero(col.meses[m]) : formatPdfUsdInt(col.meses[m], cotizacion)}
               </TdS>
             ))}
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.totalAnual) : formatUsdFromMiles(col.totalAnual, cotizacion)}
+              {isUsd ? formatPdfIntZero(col.totalAnual) : formatPdfUsdInt(col.totalAnual, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.anioMas1) : formatUsdFromMiles(col.anioMas1, cotizacion)}
+              {isUsd ? formatPdfIntZero(col.anioMas1) : formatPdfUsdInt(col.anioMas1, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.anioMas2) : formatUsdFromMiles(col.anioMas2, cotizacion)}
+              {isUsd ? formatPdfIntZero(col.anioMas2) : formatPdfUsdInt(col.anioMas2, cotizacion)}
             </TdS>
           </tr>
         </tbody>
@@ -1990,7 +1997,7 @@ function MoneyLine({
           minWidth: '30mm',
         }}
       >
-        {formatMoneyZero(v)}
+        {formatPdfIntZero(v)}
       </span>
     </div>
   );
@@ -2036,7 +2043,7 @@ function MoneyLineUsd({
           minWidth: '30mm',
         }}
       >
-        {formatUsdFromMiles(v, cotizacion)}
+        {formatPdfUsdInt(v, cotizacion)}
       </span>
     </div>
   );
@@ -2159,12 +2166,12 @@ function ResumenRow({
       <Td style={{ background: '#faf8f5', fontSize: '7.5pt', fontWeight: 500 }}>
         {label}
       </Td>
-      <Td num>{formatMoneyZero(fila?.ejActual)}</Td>
-      <Td num>{formatMoneyZero(fila?.ejSiguientes)}</Td>
+      <Td num>{formatPdfIntZero(fila?.ejActual)}</Td>
+      <Td num>{formatPdfIntZero(fila?.ejSiguientes)}</Td>
       <Td num style={{ background: '#eaf0f6', color: '#1a3a5c', fontWeight: 600 }}>
-        {formatMoneyZero(total)}
+        {formatPdfIntZero(total)}
       </Td>
-      <Td num>{formatMoneyZero(fila?.previsto)}</Td>
+      <Td num>{formatPdfIntZero(fila?.previsto)}</Td>
     </tr>
   );
 }
@@ -2220,12 +2227,12 @@ function ResumenRowUsd({
       <Td style={{ background: '#faf8f5', fontSize: '7.5pt', fontWeight: 500 }}>
         {label}
       </Td>
-      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.ejActual, cotizacion)}</Td>
-      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.ejSiguientes, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatPdfUsdInt(fila?.ejActual, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatPdfUsdInt(fila?.ejSiguientes, cotizacion)}</Td>
       <Td num style={{ ...usdStyle, fontWeight: 700 }}>
-        {formatUsdFromMilesRounded(total, cotizacion)}
+        {formatPdfUsdInt(total, cotizacion)}
       </Td>
-      <Td num style={usdStyle}>{formatUsdFromMilesRounded(fila?.previsto, cotizacion)}</Td>
+      <Td num style={usdStyle}>{formatPdfUsdInt(fila?.previsto, cotizacion)}</Td>
     </tr>
   );
 }

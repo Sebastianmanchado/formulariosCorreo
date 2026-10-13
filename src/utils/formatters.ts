@@ -140,6 +140,54 @@ export function formatPercent(n: number | null | undefined): string {
 }
 
 /**
+ * Redondeo a entero para el imprimible PDF.
+ */
+export function roundPdfInt(n: number): number {
+  return Math.round(n);
+}
+
+/**
+ * Número entero para el PDF (locale es-AR, sin decimales).
+ * Vacío / NaN → ''.
+ */
+export function formatPdfInt(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '';
+  return roundPdfInt(n).toLocaleString(AR_LOCALE, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
+ * Igual que `formatPdfInt` pero vacío / NaN → `'0'`.
+ */
+export function formatPdfIntZero(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '0';
+  if (n === 0) return '0';
+  return formatPdfInt(n);
+}
+
+/**
+ * Convierte millones de pesos → USD y formatea como entero para el PDF.
+ */
+export function formatPdfUsdInt(
+  amountInMillions: number | null | undefined,
+  cotizacionPesosPorUsd: number | null | undefined
+): string {
+  const v = toUsd(amountInMillions, cotizacionPesosPorUsd);
+  if (v === null) return '—';
+  return formatPdfInt(v);
+}
+
+/**
+ * Porcentaje redondeado a entero para el PDF: "12,5" → "13 %".
+ */
+export function formatPdfPercentInt(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '';
+  return `${formatPdfInt(n)} %`;
+}
+
+/**
  * "2025-04-20" → "20/04/2025".
  */
 export function formatDateAR(iso: string | null | undefined): string {
