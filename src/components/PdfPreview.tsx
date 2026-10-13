@@ -24,17 +24,16 @@ import {
 } from '../schemas/proyecto';
 import {
   formatDateAR,
-  formatMoney,
+  formatMoneyRounded,
   formatMoneyZero,
   formatMonth,
   formatPercent,
-  formatUsdFromMiles,
   formatUsdFromMilesRounded,
   monthYearShort,
 } from '../utils/formatters';
 
 /** Formatea un monto en M$ según la moneda del PDF. Default: millones de pesos. */
-const PdfFmtCtx = createContext<(v: number) => string>(formatMoneyZero);
+const PdfFmtCtx = createContext<(v: number) => string>(formatMoneyRounded);
 
 type Orientation = 'portrait' | 'landscape';
 
@@ -496,16 +495,16 @@ function ResumenEjecutivoPage({
                 Monto total de la erogación (activable + no activable)
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalEjActual)}
+                {formatMoneyRounded(totales.resumen.montoTotalEjActual)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}
+                {formatMoneyRounded(totales.resumen.montoTotalEjSiguientes)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalTotal)}
+                {formatMoneyRounded(totales.resumen.montoTotalTotal)}
               </Td>
               <Td num strong>
-                {formatMoneyZero(totales.resumen.montoTotalPrevisto)}
+                {formatMoneyRounded(totales.resumen.montoTotalPrevisto)}
               </Td>
             </tr>
             <ResumenRow
@@ -782,10 +781,10 @@ function CaratulaPage2({
             <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalPrevisto)}</Td>
             </tr>
             <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
           </tbody>
@@ -811,10 +810,10 @@ function CaratulaPage2({
             <ResumenRow label="Gastos adic. no activables" fila={c?.resumenMontos?.gastosNoActivables} total={totales.resumen.gastosNoActivablesTotal} />
             <tr>
               <Td style={tdTotalCaratula}>Monto total de la erogación (activable + no activable)</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjActual)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalEjSiguientes)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalTotal)}</Td>
-              <Td num strong>{formatMoneyZero(totales.resumen.montoTotalPrevisto)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalEjActual)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalEjSiguientes)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalTotal)}</Td>
+              <Td num strong>{formatMoneyRounded(totales.resumen.montoTotalPrevisto)}</Td>
             </tr>
             <ResumenRow label="Gastos incrementales corrientes" fila={c?.resumenMontos?.gastosIncrementales} total={totales.resumen.gastosIncrementalesTotal} />
           </tbody>
@@ -1055,8 +1054,8 @@ function DetalleMensualPageA({
   const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
   const fmt = (mills: number): string =>
     isUsd && cotizacionValida
-      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
-      : formatMoneyZero(mills);
+      ? formatUsdFromMilesRounded(mills, cotizacion)
+      : formatMoneyRounded(mills);
   return (
     <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
@@ -1187,8 +1186,8 @@ function DetalleMensualPageB({
   const cotizacionValida = typeof cotizacion === 'number' && cotizacion > 0;
   const fmt = (mills: number): string =>
     isUsd && cotizacionValida
-      ? formatMoney(parseFloat(((mills * 1_000_000) / cotizacion!).toFixed(2))) || '0'
-      : formatMoneyZero(mills);
+      ? formatUsdFromMilesRounded(mills, cotizacion)
+      : formatMoneyRounded(mills);
   return (
     <PdfFmtCtx.Provider value={fmt}>
       <PageHeadingRow tag="②" title={`Detalle Mensual — ${proyecto}`} />
@@ -1282,7 +1281,7 @@ function AnexoSubsectionBlock({
   isUsd?: boolean;
 }) {
   const fmt = (v: number | null | undefined) =>
-    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
+    isUsd ? formatUsdFromMilesRounded(v, cotizacion) : formatMoneyRounded(v);
   return (
     <>
       <div
@@ -1384,21 +1383,21 @@ function AnexoSubsectionBlock({
                 <TdS strong highlight>{isUsd ? 'Total (M$)' : 'Total (USD)'}</TdS>
                 <TdS highlight /><TdS highlight />
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.costoTotal) : formatUsdFromMiles(colTotals.costoTotal, cotizacion)}
+                  {isUsd ? formatMoneyRounded(colTotals.costoTotal) : formatUsdFromMilesRounded(colTotals.costoTotal, cotizacion)}
                 </TdS>
                 {MESES_KEYS.map((m) => (
                   <TdS key={m} num strong highlight>
-                    {isUsd ? formatMoneyZero(colTotals.meses[m]) : formatUsdFromMiles(colTotals.meses[m], cotizacion)}
+                    {isUsd ? formatMoneyRounded(colTotals.meses[m]) : formatUsdFromMilesRounded(colTotals.meses[m], cotizacion)}
                   </TdS>
                 ))}
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.totalAnual) : formatUsdFromMiles(colTotals.totalAnual, cotizacion)}
+                  {isUsd ? formatMoneyRounded(colTotals.totalAnual) : formatUsdFromMilesRounded(colTotals.totalAnual, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.anioMas1) : formatUsdFromMiles(colTotals.anioMas1, cotizacion)}
+                  {isUsd ? formatMoneyRounded(colTotals.anioMas1) : formatUsdFromMilesRounded(colTotals.anioMas1, cotizacion)}
                 </TdS>
                 <TdS num strong highlight>
-                  {isUsd ? formatMoneyZero(colTotals.anioMas2) : formatUsdFromMiles(colTotals.anioMas2, cotizacion)}
+                  {isUsd ? formatMoneyRounded(colTotals.anioMas2) : formatUsdFromMilesRounded(colTotals.anioMas2, cotizacion)}
                 </TdS>
               </tr>
             </>
@@ -1419,7 +1418,7 @@ function AnexosTecnologicosBlock({
   isUsd?: boolean;
 }) {
   const fmt = (v: number | null | undefined) =>
-    isUsd ? formatUsdFromMiles(v, cotizacion) : formatMoneyZero(v);
+    isUsd ? formatUsdFromMilesRounded(v, cotizacion) : formatMoneyRounded(v);
   return (
     <>
       <div
@@ -1482,21 +1481,21 @@ function AnexosTecnologicosBlock({
             <TdS strong highlight>{isUsd ? 'Ref. M$' : 'Total (USD)'}</TdS>
             <TdS highlight /><TdS highlight />
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.costoTotal) : formatUsdFromMiles(col.costoTotal, cotizacion)}
+              {isUsd ? formatMoneyRounded(col.costoTotal) : formatUsdFromMilesRounded(col.costoTotal, cotizacion)}
             </TdS>
             {MESES_KEYS.map((m) => (
               <TdS key={m} num strong highlight>
-                {isUsd ? formatMoneyZero(col.meses[m]) : formatUsdFromMiles(col.meses[m], cotizacion)}
+                {isUsd ? formatMoneyRounded(col.meses[m]) : formatUsdFromMilesRounded(col.meses[m], cotizacion)}
               </TdS>
             ))}
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.totalAnual) : formatUsdFromMiles(col.totalAnual, cotizacion)}
+              {isUsd ? formatMoneyRounded(col.totalAnual) : formatUsdFromMilesRounded(col.totalAnual, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.anioMas1) : formatUsdFromMiles(col.anioMas1, cotizacion)}
+              {isUsd ? formatMoneyRounded(col.anioMas1) : formatUsdFromMilesRounded(col.anioMas1, cotizacion)}
             </TdS>
             <TdS num strong highlight>
-              {isUsd ? formatMoneyZero(col.anioMas2) : formatUsdFromMiles(col.anioMas2, cotizacion)}
+              {isUsd ? formatMoneyRounded(col.anioMas2) : formatUsdFromMilesRounded(col.anioMas2, cotizacion)}
             </TdS>
           </tr>
         </tbody>
@@ -1990,7 +1989,7 @@ function MoneyLine({
           minWidth: '30mm',
         }}
       >
-        {formatMoneyZero(v)}
+        {formatMoneyRounded(v)}
       </span>
     </div>
   );
@@ -2036,7 +2035,7 @@ function MoneyLineUsd({
           minWidth: '30mm',
         }}
       >
-        {formatUsdFromMiles(v, cotizacion)}
+        {formatUsdFromMilesRounded(v, cotizacion)}
       </span>
     </div>
   );
@@ -2159,12 +2158,12 @@ function ResumenRow({
       <Td style={{ background: '#faf8f5', fontSize: '7.5pt', fontWeight: 500 }}>
         {label}
       </Td>
-      <Td num>{formatMoneyZero(fila?.ejActual)}</Td>
-      <Td num>{formatMoneyZero(fila?.ejSiguientes)}</Td>
+      <Td num>{formatMoneyRounded(fila?.ejActual)}</Td>
+      <Td num>{formatMoneyRounded(fila?.ejSiguientes)}</Td>
       <Td num style={{ background: '#eaf0f6', color: '#1a3a5c', fontWeight: 600 }}>
-        {formatMoneyZero(total)}
+        {formatMoneyRounded(total)}
       </Td>
-      <Td num>{formatMoneyZero(fila?.previsto)}</Td>
+      <Td num>{formatMoneyRounded(fila?.previsto)}</Td>
     </tr>
   );
 }

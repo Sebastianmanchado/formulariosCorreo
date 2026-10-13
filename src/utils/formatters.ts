@@ -39,6 +39,23 @@ export function formatMoneyZero(n: number | null | undefined): string {
 }
 
 /**
+ * Igual que `formatMoneyZero` pero redondeado al entero más cercano.
+ * Pensado para el imprimible, donde los montos no muestran centavos.
+ */
+export function formatMoneyRounded(n: number | null | undefined): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return '0';
+  const rounded = roundHalfAwayFromZero(n);
+  return rounded.toLocaleString(AR_LOCALE, {
+    maximumFractionDigits: 0,
+  });
+}
+
+/** Redondeo comercial: el .5 se aleja de cero. */
+function roundHalfAwayFromZero(n: number): number {
+  return Math.sign(n) * Math.round(Math.abs(n));
+}
+
+/**
  * Parseo tolerante de input de usuario.
  * Acepta: "1234", "1234.56", "1.234,56", "1234,56", "-500".
  */
@@ -106,7 +123,7 @@ export function formatUsdFromMiles(
 
 /**
  * Igual que `formatUsdFromMiles` pero redondeado a USD enteros (sin decimales).
- * Pensado para tablas de resumen donde no aporta el detalle de centavos.
+ * Pensado para el imprimible.
  */
 export function formatUsdFromMilesRounded(
   amountInMillions: number | null | undefined,
@@ -114,8 +131,7 @@ export function formatUsdFromMilesRounded(
 ): string {
   const v = toUsd(amountInMillions, cotizacionPesosPorUsd);
   if (v === null) return '—';
-  return v.toLocaleString(AR_LOCALE, {
-    minimumFractionDigits: 0,
+  return roundHalfAwayFromZero(v).toLocaleString(AR_LOCALE, {
     maximumFractionDigits: 0,
   });
 }
