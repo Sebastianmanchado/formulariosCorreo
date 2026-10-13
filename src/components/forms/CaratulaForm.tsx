@@ -81,16 +81,8 @@ function CotizacionSection({
 }
 
 /**
- * Input para la cotización USD. Usa un estado local de string para permitir
- * tipear cómodamente decimales (incluyendo el caso "1180," con coma final
- * mientras el usuario va a tipear la parte decimal). Sincroniza con el form
- * state vía `useWatch` + `setValue`:
- *   • `useWatch` se asegura de que un `methods.reset()` externo limpie el
- *     input visualmente (apenas el value del form baja a undefined/null,
- *     forzamos el text local a '').
- *   • Al perder foco, se reformatea desde el form value (con coma decimal).
- *   • Mientras el input está enfocado, el texto local manda — no lo
- *     sobreescribimos en cada keystroke.
+ * Cotización USD: reutiliza DecimalNumberInput (hasta 2 decimales) con el
+ * layout propio (ancho fijo + sufijo $/USD).
  */
 function CotizacionInput() {
   const { control, setValue } = useFormContext<Proyecto>();
@@ -98,65 +90,16 @@ function CotizacionInput() {
     control,
     name: 'caratula.cotizacionUsd',
   });
-  const [text, setText] = useState<string>(() => formatLocalNumber(formValue));
-  const [focused, setFocused] = useState(false);
-
-  // Ref que rastrea el último valor que ESTE componente escribió al form.
-  // Sirve para distinguir un cambio "propio" (porque el usuario está
-  // tipeando) de un cambio "externo" (un methods.reset() u otro setValue
-  // desde afuera). Sin esto, el useEffect borraba el texto cada vez que
-  // el usuario tipeaba una coma final ("1180,"), porque eso baja
-  // momentáneamente el form value a undefined.
-  const lastSelfWroteRef = useRef<number | null | undefined>(formValue);
-
-  useEffect(() => {
-    if (formValue === lastSelfWroteRef.current) return;
-    // Cambio externo detectado (no vino de nuestro onChange).
-    lastSelfWroteRef.current = formValue;
-    if (formValue === undefined || formValue === null) {
-      // Clear externo (ej: handleReset) — vaciamos siempre, incluso focused.
-      setText('');
-    } else if (!focused) {
-      // Cambio numérico externo y el usuario no está tipeando — sincronizamos.
-      setText(formatLocalNumber(formValue));
-    }
-  }, [formValue, focused]);
 
   return (
     <div className="relative w-[220px]">
-      <input
+      <DecimalNumberInput
+        name="caratula.cotizacionUsd"
+        formValue={formValue}
+        setValue={setValue}
+        maxFractionDigits={2}
         id="cotizacionUsd"
-        type="text"
-        inputMode="decimal"
         placeholder="0,00"
-        value={text}
-        onFocus={(e) => {
-          setFocused(true);
-          // Mostrar el número sin separadores de miles para edición cómoda.
-          if (formValue !== null && formValue !== undefined) {
-            setText(String(formValue).replace('.', ','));
-          }
-          e.currentTarget.select();
-        }}
-        onBlur={() => {
-          setFocused(false);
-          // Al perder foco, reformateamos con separadores de miles.
-          setText(formatLocalNumber(formValue));
-        }}
-        onChange={(e) => {
-          const v = e.target.value;
-          // Permitimos sólo dígitos, coma, punto y signo menos al inicio.
-          if (!/^-?[\d.,]*$/.test(v)) return;
-          setText(v);
-
-          // Parseo tolerante: acepta "1180", "1180,5", "1.180,50".
-          const next = parseMoney(v);
-          // Si parseMoney devuelve undefined con input no-vacío, el usuario
-          // está en medio de un ingreso inválido — no modificamos el form value.
-          if (next === undefined && v.trim() !== '' && v.trim() !== '-') return;
-          lastSelfWroteRef.current = next;
-          setValue('caratula.cotizacionUsd', next, { shouldDirty: true });
-        }}
         className="w-full rounded-sm border border-border-input bg-white px-2 py-1.5 pr-14 text-right font-mono text-[12px] tabular-nums text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-accent focus:ring-2 focus:ring-accent/20"
       />
       <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-ink-muted">
@@ -164,12 +107,6 @@ function CotizacionInput() {
       </span>
     </div>
   );
-}
-
-/** Formato local AR: separador de miles punto, decimal coma. */
-function formatLocalNumber(n: number | null | undefined): string {
-  if (n === undefined || n === null || Number.isNaN(n)) return '';
-  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
@@ -906,11 +843,17 @@ function DecimalNumberInput({
   formValue,
   setValue,
   maxFractionDigits,
+  id,
+  placeholder,
+  className = numberInputClassName,
 }: {
   name: FieldPath<Proyecto>;
   formValue: number | null | undefined;
   setValue: ReturnType<typeof useFormContext<Proyecto>>['setValue'];
   maxFractionDigits: number;
+  id?: string;
+  placeholder?: string;
+  className?: string;
 }) {
   const [text, setText] = useState(() =>
     formatDecimalDisplay(formValue, maxFractionDigits)
@@ -930,8 +873,10 @@ function DecimalNumberInput({
 
   return (
     <input
+      id={id}
       type="text"
       inputMode="decimal"
+      placeholder={placeholder}
       value={text}
       onFocus={(e) => {
         setFocused(true);
@@ -964,7 +909,7 @@ function DecimalNumberInput({
         lastSelfWroteRef.current = normalized;
         setValue(name, normalized as never, { shouldDirty: true });
       }}
-      className={numberInputClassName}
+      className={className}
     />
   );
 }
