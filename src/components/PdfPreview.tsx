@@ -627,6 +627,7 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
       <SectionTitle>Encabezado</SectionTitle>
       <KV>
         <KVRow label="Fecha" value={formatDateAR(c?.encabezado?.fecha)} />
+        <KVRow label="Subdirección" value={c?.encabezado?.subdireccion || '—'} />
         <KVRow label="Dirección" value={c?.encabezado?.direccion || '—'} />
         <KVRow label="Gerencia" value={c?.encabezado?.gerencia || '—'} />
         <KVRow label="OT" value={c?.encabezado?.ot || ''} />
@@ -687,15 +688,15 @@ function CaratulaPage2({
       <SectionTitle>Características Básicas</SectionTitle>
       <Grid cols="repeat(3, 1fr)">
         <MiniField
-          label="Mes de inicio del proyecto"
+          label="Año y mes de inicio del proyecto"
           value={formatMonth(c?.caracteristicas?.mesInicio) || '—'}
         />
         <MiniField
-          label="Mes de finalización de la erogación"
+          label="Año y mes de finalización de la erogación"
           value={formatMonth(c?.caracteristicas?.mesFinErogacion) || '—'}
         />
         <MiniField
-          label="Mes de finalización del proyecto"
+          label="Año y mes de finalización del proyecto"
           value={formatMonth(c?.caracteristicas?.mesFinProyecto) || '—'}
         />
       </Grid>

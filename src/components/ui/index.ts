@@ -12,6 +12,7 @@ export { SectionTitle } from './SectionTitle';
 export { Card } from './Card';
 export { Field } from './Field';
 export { SaveIndicator } from './SaveIndicator';
+export { ApemMenu } from './ApemMenu';
 export { SectionNav } from './SectionNav';
 export { FileDropBox } from './FileDropBox';
 export { MonthYearPicker } from './MonthYearPicker';

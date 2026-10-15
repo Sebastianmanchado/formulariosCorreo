@@ -4,7 +4,7 @@ import { AnexosActivosForm } from './components/forms/AnexosActivosForm';
 import { CaratulaForm } from './components/forms/CaratulaForm';
 import { DetalleMensualForm } from './components/forms/DetalleMensualForm';
 import { PdfPreview } from './components/PdfPreview';
-import { SaveIndicator, SectionNav } from './components/ui';
+import { ApemMenu, SaveIndicator, SectionNav } from './components/ui';
 import {
   AttachmentsProvider,
   useAttachments,
@@ -12,12 +12,13 @@ import {
 } from './hooks/useAttachments';
 import { useActiveSection } from './hooks/useActiveSection';
 import {
-  loadProyectoFromStorage,
-  useProyectoPersist,
-  type PersistApi,
+  loadApemStore,
+  useApemCatalog,
+  type ApemCatalogApi,
+  type ApemStore,
 } from './hooks/useLocalStorage';
 import { useProyectoForm } from './hooks/useProyectoForm';
-import { crearProyectoVacio, type Proyecto } from './schemas/proyecto';
+import { crearProyectoVacio, validarParaImpresion, type Proyecto } from './schemas/proyecto';
 import { CORREO_AMARILLO, APP_VERSION } from './data/constants';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { monthYearShort } from './utils/formatters';
@@ -48,18 +49,19 @@ function scrollToSection(id: string, updateHash = true) {
 }
 
 export default function App() {
+  const [boot] = useState(loadApemStore);
   return (
-    <AttachmentsProvider>
-      <AppInner />
+    <AttachmentsProvider initialActiveId={boot.activeId}>
+      <AppInner boot={boot} />
     </AttachmentsProvider>
   );
 }
 
-function AppInner() {
-  const [initial] = useState(() => loadProyectoFromStorage());
-  const methods = useProyectoForm(initial);
-  const persist = useProyectoPersist(methods);
+function AppInner({ boot }: { boot: ApemStore }) {
+  const exigirPdfRef = useRef(false);
+  const methods = useProyectoForm(boot.proyectos[boot.activeId]?.data, exigirPdfRef);
   const attachments = useAttachments();
+  const catalog = useApemCatalog(methods, boot, attachments);
 
   const active = useActiveSection(SECTION_IDS);
   const pdfRootRef = useRef<HTMLDivElement>(null);
@@ -80,9 +82,10 @@ function AppInner() {
 
   const handleReset = () => {
     const ok = window.confirm(
-      '¿Limpiar todo el formulario? Los datos no guardados se perderán y se borrará el borrador local.'
+      '¿Limpiar este APEM? Se vacían los datos cargados. El APEM sigue en la lista.'
     );
     if (!ok) return;
+    exigirPdfRef.current = false;
     methods.reset(crearProyectoVacio());
     // Defensive: forzar undefined en campos numéricos que algunos inputs
     // (Controller + MoneyInput) no actualizan de forma confiable tras reset.
@@ -92,8 +95,14 @@ function AppInner() {
     methods.setValue('caratula.evaluacion.tasaCorte', undefined, { shouldDirty: false });
     methods.setValue('caratula.evaluacion.van', undefined, { shouldDirty: false });
     methods.setValue('caratula.evaluacion.periodoRepagoMeses', undefined, { shouldDirty: false });
-    persist.clearStorage();
+    catalog.saveNow();
     attachments.clearAll();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    history.replaceState(null, '', '#caratula');
+  };
+
+  const showActiveApem = () => {
+    exigirPdfRef.current = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     history.replaceState(null, '', '#caratula');
   };
@@ -138,7 +147,7 @@ function AppInner() {
 
     methods.reset(fresh);
     // Flush inmediato del borrador ya depurado.
-    persist.saveNow();
+    catalog.saveNow();
     logger.info('currency.changed', { to: next });
     // NO limpiamos `attachments`: los blobs referenciados por
     // `descripcionAnexos`/`objetivosAnexos` siguen siendo válidos tras el
@@ -148,21 +157,36 @@ function AppInner() {
   };
 
   const handleGeneratePdf = async () => {
-    persist.saveNow();
-    const dateFields = [
+    catalog.saveNow();
+    const camposPdf = [
+      'caratula.encabezado.fecha',
+      'caratula.descripcion.denominacion',
+      'caratula.descripcion.descripcion',
+      'caratula.descripcion.objetivos',
       'caratula.caracteristicas.mesInicio',
       'caratula.caracteristicas.mesFinErogacion',
       'caratula.caracteristicas.mesFinProyecto',
     ] as const;
-    const valid = await methods.trigger([...dateFields]);
-    if (!valid) {
-      logger.warn('pdf.validation_failed', { fields: [...dateFields] });
+    const issues = validarParaImpresion(methods.getValues());
+    exigirPdfRef.current = issues.length > 0;
+    if (issues.length > 0) {
+      await methods.trigger([...camposPdf]);
+      const hasOrder = issues.some((issue) => issue.kind === 'order');
+      const hasRequired = issues.some((issue) => issue.kind === 'required');
+      logger.warn('pdf.validation_failed', {
+        fields: issues.map((issue) => issue.path),
+      });
       window.alert(
-        'Revisá las fechas en Características Básicas: los meses de finalización deben ser posteriores al mes de inicio.'
+        hasRequired && hasOrder
+          ? 'Completá los campos obligatorios de la carátula. Además, los años y meses de finalización deben ser posteriores al de inicio.'
+          : hasOrder
+            ? 'Revisá las fechas en Características Básicas: los años y meses de finalización deben ser posteriores al de inicio.'
+            : 'Completá los campos obligatorios de la carátula antes de imprimir.'
       );
       scrollToSection('section-caratula', false);
       return;
     }
+    exigirPdfRef.current = false;
     const values = methods.getValues();
     const attachmentGroups = buildAttachmentGroups(values, attachments);
     const attachmentCount = attachmentGroups.reduce(
@@ -200,10 +224,20 @@ function AppInner() {
         {/* Topbar + nav de secciones en el mismo contenedor sticky */}
         <div className="no-print sticky top-0 z-50 shadow-topbar">
           <Topbar
-            persist={persist}
+            catalog={catalog}
             generating={pdf.generating}
             onReset={handleReset}
             onGeneratePdf={handleGeneratePdf}
+            onCreate={() => {
+              catalog.createNew();
+              showActiveApem();
+            }}
+            onOpen={(id) => {
+              if (catalog.open(id)) showActiveApem();
+            }}
+            onDelete={(id) => {
+              if (catalog.remove(id)) showActiveApem();
+            }}
           />
           <div className="border-b-2 border-border-strong bg-section">
             <SectionNav
@@ -228,10 +262,13 @@ function AppInner() {
                   {s.label}
                 </h1>
                 {s.hash === 'caratula' && (
-                  <CaratulaForm onMonedaChange={handleModedaChange} />
+                  <CaratulaForm
+                    key={catalog.activeId}
+                    onMonedaChange={handleModedaChange}
+                  />
                 )}
-                {s.hash === 'detalle' && <DetalleMensualForm />}
-                {s.hash === 'anexos' && <AnexosActivosForm />}
+                {s.hash === 'detalle' && <DetalleMensualForm key={catalog.activeId} />}
+                {s.hash === 'anexos' && <AnexosActivosForm key={catalog.activeId} />}
               </section>
             ))}
           </form>
@@ -263,18 +300,24 @@ function AppInner() {
 }
 
 function Topbar({
-  persist,
+  catalog,
   generating,
   onReset,
   onGeneratePdf,
+  onCreate,
+  onOpen,
+  onDelete,
 }: {
-  persist: PersistApi;
+  catalog: ApemCatalogApi;
   generating: boolean;
   onReset: () => void;
   onGeneratePdf: () => void;
+  onCreate: () => void;
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
-    <header className="flex items-center justify-between gap-4 bg-accent px-6 py-3 text-white">
+    <header className="relative z-20 flex flex-wrap items-center justify-between gap-3 bg-accent px-6 py-3 text-white">
       <div className="flex min-w-0 items-center gap-4">
         <div
           className="shrink-0 rounded-sm px-2 py-1.5 leading-none"
@@ -295,14 +338,27 @@ function Topbar({
           </span>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <SaveIndicator
-          status={persist.status}
-          lastSavedAt={persist.lastSavedAt}
+          status={catalog.status}
+          lastSavedAt={catalog.lastSavedAt}
+        />
+        <ApemMenu
+          items={catalog.items}
+          activeId={catalog.activeId}
+          onOpen={onOpen}
+          onDelete={onDelete}
         />
         <button
           type="button"
-          onClick={persist.saveNow}
+          onClick={onCreate}
+          className="rounded-sm border border-white/30 bg-transparent px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-white/10"
+        >
+          Nuevo APEM
+        </button>
+        <button
+          type="button"
+          onClick={catalog.saveNow}
           className="rounded-sm border border-white/30 bg-transparent px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-white/10"
         >
           Guardar borrador

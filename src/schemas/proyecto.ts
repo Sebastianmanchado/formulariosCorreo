@@ -45,6 +45,7 @@ const fechaHoyField = z.preprocess(
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 const encabezadoSchema = z.object({
   fecha: fechaHoyField,
+  subdireccion: textField,
   direccion: textField,
   gerencia: textField,
   ot: textField,
@@ -116,7 +117,7 @@ const caracteristicasSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Debe ser posterior al mes de inicio del proyecto',
+        message: 'Debe ser posterior al año y mes de inicio del proyecto',
         path: ['mesFinErogacion'],
       });
     }
@@ -127,7 +128,7 @@ const caracteristicasSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Debe ser posterior al mes de inicio del proyecto',
+        message: 'Debe ser posterior al año y mes de inicio del proyecto',
         path: ['mesFinProyecto'],
       });
     }
@@ -343,6 +344,101 @@ export const proyectoSchema = z.object({
 });
 
 export type Proyecto = z.infer<typeof proyectoSchema>;
+
+/**
+ * Reglas solo para Imprimir / PDF. El schema del borrador sigue aceptando
+ * estos campos vacíos para poder guardar un APEM incompleto.
+ */
+const impresionSchema = z
+  .object({
+    fecha: z
+      .string()
+      .trim()
+      .min(1, 'La fecha es obligatoria')
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha es obligatoria'),
+    denominacion: z.string().trim().min(1, 'La denominación del proyecto es obligatoria'),
+    descripcion: z.string().trim().min(1, 'La descripción es obligatoria'),
+    objetivos: z.string().trim().min(1, 'Los objetivos y la justificación son obligatorios'),
+    mesInicio: z.string().trim().regex(YM_RE, 'Indicá el año y mes de inicio del proyecto'),
+    mesFinErogacion: z
+      .string()
+      .trim()
+      .regex(YM_RE, 'Indicá el año y mes de finalización de la erogación'),
+    mesFinProyecto: z
+      .string()
+      .trim()
+      .regex(YM_RE, 'Indicá el año y mes de finalización del proyecto'),
+  })
+  .superRefine((data, ctx) => {
+    if (!isYearMonth(data.mesInicio)) return;
+    if (
+      isYearMonth(data.mesFinErogacion) &&
+      compareYearMonth(data.mesFinErogacion, data.mesInicio) <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Debe ser posterior al año y mes de inicio del proyecto',
+        path: ['mesFinErogacion'],
+      });
+    }
+    if (
+      isYearMonth(data.mesFinProyecto) &&
+      compareYearMonth(data.mesFinProyecto, data.mesInicio) <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Debe ser posterior al año y mes de inicio del proyecto',
+        path: ['mesFinProyecto'],
+      });
+    }
+  });
+
+const IMPRESION_PATHS = {
+  fecha: 'caratula.encabezado.fecha',
+  denominacion: 'caratula.descripcion.denominacion',
+  descripcion: 'caratula.descripcion.descripcion',
+  objetivos: 'caratula.descripcion.objetivos',
+  mesInicio: 'caratula.caracteristicas.mesInicio',
+  mesFinErogacion: 'caratula.caracteristicas.mesFinErogacion',
+  mesFinProyecto: 'caratula.caracteristicas.mesFinProyecto',
+} as const;
+
+type ImpresionKey = keyof typeof IMPRESION_PATHS;
+
+export type ErrorImpresion = {
+  path: (typeof IMPRESION_PATHS)[ImpresionKey];
+  message: string;
+  kind: 'required' | 'order';
+};
+
+export function validarParaImpresion(proyecto: Proyecto): ErrorImpresion[] {
+  const result = impresionSchema.safeParse({
+    fecha: proyecto.caratula?.encabezado?.fecha ?? '',
+    denominacion: proyecto.caratula?.descripcion?.denominacion ?? '',
+    descripcion: proyecto.caratula?.descripcion?.descripcion ?? '',
+    objetivos: proyecto.caratula?.descripcion?.objetivos ?? '',
+    mesInicio: proyecto.caratula?.caracteristicas?.mesInicio ?? '',
+    mesFinErogacion: proyecto.caratula?.caracteristicas?.mesFinErogacion ?? '',
+    mesFinProyecto: proyecto.caratula?.caracteristicas?.mesFinProyecto ?? '',
+  });
+  if (result.success) return [];
+
+  const out: ErrorImpresion[] = [];
+  const seen = new Set<string>();
+  for (const issue of result.error.issues) {
+    const key = issue.path[0];
+    if (typeof key !== 'string' || !(key in IMPRESION_PATHS)) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      path: IMPRESION_PATHS[key as ImpresionKey],
+      message: issue.message,
+      kind: issue.code === 'custom' ? 'order' : 'required',
+    });
+  }
+  return out;
+}
+
 export type Caratula = z.infer<typeof caratulaSchema>;
 export type DetalleMensual = z.infer<typeof detalleMensualSchema>;
 export type AnexosActivos = z.infer<typeof anexosActivosSchema>;

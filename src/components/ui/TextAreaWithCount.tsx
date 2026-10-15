@@ -8,6 +8,7 @@ type Props<T extends FieldValues> = {
   placeholder?: string;
   id?: string;
   className?: string;
+  invalid?: boolean;
 };
 
 /**
@@ -23,6 +24,7 @@ export function TextAreaWithCount<T extends FieldValues>({
   placeholder,
   id,
   className = '',
+  invalid = false,
 }: Props<T>) {
   const { register, control } = useFormContext<T>();
   const value = useWatch({ control, name }) as string | undefined;
@@ -36,6 +38,7 @@ export function TextAreaWithCount<T extends FieldValues>({
         rows={rows}
         placeholder={placeholder}
         maxLength={maxLength}
+        invalid={invalid}
         {...register(name)}
       />
       <div

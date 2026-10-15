@@ -30,6 +30,7 @@ type Props<T extends FieldValues> = {
   yearsBefore?: number;
   /** Cuántos años después del actual incluir. Default: 15. */
   yearsAfter?: number;
+  invalid?: boolean;
 };
 
 /**
@@ -45,6 +46,7 @@ export function MonthYearPicker<T extends FieldValues>({
   name,
   yearsBefore = 5,
   yearsAfter = 15,
+  invalid = false,
 }: Props<T>) {
   const { control } = useFormContext<T>();
   return (
@@ -58,6 +60,7 @@ export function MonthYearPicker<T extends FieldValues>({
           onBlur={field.onBlur}
           yearsBefore={yearsBefore}
           yearsAfter={yearsAfter}
+          invalid={invalid}
         />
       )}
     />
@@ -72,9 +75,10 @@ type InnerProps = {
   onBlur?: () => void;
   yearsBefore: number;
   yearsAfter: number;
+  invalid: boolean;
 };
 
-function Inner({ value, onChange, onBlur, yearsBefore, yearsAfter }: InnerProps) {
+function Inner({ value, onChange, onBlur, yearsBefore, yearsAfter, invalid }: InnerProps) {
   const parsed = YM_RE.exec(value);
   const selectedYear = parsed ? parsed[1] : null;
   const selectedMonth = parsed ? parsed[2] : null;
@@ -166,7 +170,11 @@ function Inner({ value, onChange, onBlur, yearsBefore, yearsAfter }: InnerProps)
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex w-full items-center justify-between rounded-sm border border-border-input bg-white px-2 py-1.5 text-left text-[13px] text-ink outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20"
+        className={`flex w-full items-center justify-between rounded-sm border bg-white px-2 py-1.5 text-left text-[13px] text-ink outline-none transition-colors focus:ring-2 ${
+          invalid
+            ? 'border-accent2 focus:border-accent2 focus:ring-accent2/20'
+            : 'border-border-input focus:border-accent focus:ring-accent/20'
+        }`}
       >
         <span className={display ? '' : 'italic text-ink-muted/60'}>
           {display || '— seleccionar —'}

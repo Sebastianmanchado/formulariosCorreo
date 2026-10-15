@@ -174,17 +174,25 @@ function formatLocalNumber(n: number | null | undefined): string {
 
 // ─── Encabezado ─────────────────────────────────────────────────────────────
 function EncabezadoSection() {
-  const { register } = useFormContext<Proyecto>();
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<Proyecto>();
   const today = todayISO();
+  const fechaErr = errors.caratula?.encabezado?.fecha?.message;
   return (
     <Card>
-      <div className="grid gap-3 md:grid-cols-[180px_1fr_160px]">
-        <Field label="Fecha" bold orientation="column">
-          <Input type="date" max={today} {...register('caratula.encabezado.fecha')} />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_140px]">
+        <Field label={<>Fecha <span className="text-accent2">*</span></>} bold orientation="column">
+          <Input
+            type="date"
+            max={today}
+            invalid={!!fechaErr}
+            {...register('caratula.encabezado.fecha')}
+          />
+          {fechaErr && <p className="text-[11px] text-accent2">{fechaErr}</p>}
         </Field>
-        <div>
-          <OrganigramaSelect />
-        </div>
+        <OrganigramaSelect />
         <Field label="OT (Orden de Trabajo)" bold orientation="column">
           <Input type="text" {...register('caratula.encabezado.ot')} />
         </Field>
@@ -195,7 +203,11 @@ function EncabezadoSection() {
 
 // ─── A. Descripción general ─────────────────────────────────────────────────
 function DescripcionGeneralSection() {
-  const { register, control } = useFormContext<Proyecto>();
+  const {
+    register,
+    control,
+    formState: { errors },
+  } = useFormContext<Proyecto>();
   const descIncluyeAnexo = useWatch({
     control,
     name: 'caratula.descripcion.descripcionIncluyeAnexo',
@@ -204,25 +216,40 @@ function DescripcionGeneralSection() {
     control,
     name: 'caratula.descripcion.objetivosIncluyeAnexo',
   });
+  const denErr = errors.caratula?.descripcion?.denominacion?.message;
+  const descErr = errors.caratula?.descripcion?.descripcion?.message;
+  const objErr = errors.caratula?.descripcion?.objetivos?.message;
   return (
     <>
       <SectionTitle>A. Descripción General</SectionTitle>
       <Card>
-        <Field label="Denominación del proyecto" bold labelWidth="220px">
-          <Input type="text" {...register('caratula.descripcion.denominacion')} />
+        <Field
+          label={<>Denominación del proyecto <span className="text-accent2">*</span></>}
+          bold
+          labelWidth="220px"
+        >
+          <Input
+            type="text"
+            invalid={!!denErr}
+            {...register('caratula.descripcion.denominacion')}
+          />
+          {denErr && <p className="mt-1 text-[11px] text-accent2">{denErr}</p>}
         </Field>
 
         <hr className="my-3 border-border" />
 
-        <Field label="Descripción" bold labelWidth="220px">
-          <div className="mb-1.5 text-[11px] italic text-ink-muted">
-            Añadir objetivos y comentarios de los adjuntos en caso de ser necesario.
-          </div>
+        <Field
+          label={<>Descripción <span className="text-accent2">*</span></>}
+          bold
+          labelWidth="220px"
+        >
           <TextAreaWithCount<Proyecto>
             name="caratula.descripcion.descripcion"
             maxLength={DESCRIPCION_MAX}
             rows={3}
+            invalid={!!descErr}
           />
+          {descErr && <p className="text-[11px] text-accent2">{descErr}</p>}
           <div className="mt-1.5">
             <Checkbox
               label="La descripción incluye un anexo adjunto"
@@ -236,15 +263,18 @@ function DescripcionGeneralSection() {
 
         <hr className="my-3 border-border" />
 
-        <Field label="Objetivos y justificación" bold labelWidth="220px">
-          <div className="mb-1.5 text-[11px] italic text-ink-muted">
-            Añadir objetivos y justificación y comentarios de los adjuntos en caso de ser necesario.
-          </div>
+        <Field
+          label={<>Objetivos y justificación <span className="text-accent2">*</span></>}
+          bold
+          labelWidth="220px"
+        >
           <TextAreaWithCount<Proyecto>
             name="caratula.descripcion.objetivos"
             maxLength={DESCRIPCION_MAX}
             rows={3}
+            invalid={!!objErr}
           />
+          {objErr && <p className="text-[11px] text-accent2">{objErr}</p>}
           <div className="mt-1.5">
             <Checkbox
               label="Los objetivos incluyen un anexo adjunto"
@@ -307,20 +337,41 @@ function CaracteristicasSection() {
       <SectionTitle variant="sub">Características Básicas</SectionTitle>
       <Card>
         <div className="grid gap-3 md:grid-cols-3">
-          <Field label="Mes de inicio del proyecto" orientation="column">
-            <MonthYearPicker<Proyecto> name="caratula.caracteristicas.mesInicio" />
+          <Field
+            label={<>Año y mes de inicio del proyecto <span className="text-accent2">*</span></>}
+            orientation="column"
+          >
+            <MonthYearPicker<Proyecto>
+              name="caratula.caracteristicas.mesInicio"
+              invalid={!!carErr?.mesInicio?.message}
+            />
+            {carErr?.mesInicio?.message && (
+              <p className="text-[11px] text-accent2">{carErr.mesInicio.message}</p>
+            )}
           </Field>
-          <Field label="Mes de finalización de la erogación" orientation="column">
+          <Field
+            label={
+              <>Año y mes de finalización de la erogación <span className="text-accent2">*</span></>
+            }
+            orientation="column"
+          >
             <MonthYearPicker<Proyecto>
               name="caratula.caracteristicas.mesFinErogacion"
+              invalid={!!carErr?.mesFinErogacion?.message}
             />
             {carErr?.mesFinErogacion?.message && (
               <p className="text-[11px] text-accent2">{carErr.mesFinErogacion.message}</p>
             )}
           </Field>
-          <Field label="Mes de finalización del proyecto" orientation="column">
+          <Field
+            label={
+              <>Año y mes de finalización del proyecto <span className="text-accent2">*</span></>
+            }
+            orientation="column"
+          >
             <MonthYearPicker<Proyecto>
               name="caratula.caracteristicas.mesFinProyecto"
+              invalid={!!carErr?.mesFinProyecto?.message}
             />
             {carErr?.mesFinProyecto?.message && (
               <p className="text-[11px] text-accent2">{carErr.mesFinProyecto.message}</p>
