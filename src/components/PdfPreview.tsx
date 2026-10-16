@@ -29,7 +29,6 @@ import {
   formatMonth,
   formatPercent,
   formatUsdFromMilesRounded,
-  monthYearShort,
 } from '../utils/formatters';
 
 /** Formatea un monto en M$ según la moneda del PDF. Default: millones de pesos. */
@@ -1624,7 +1623,7 @@ function Header({ n, total }: { n: number; total: number }) {
             letterSpacing: '0.5px',
           }}
         >
-          AD-OO-0136/01-07 {monthYearShort()}
+          AD-OO-0136/01
         </div>
         <div
           style={{

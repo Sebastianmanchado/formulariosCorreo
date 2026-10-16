@@ -332,7 +332,7 @@ export const proyectoSchema = z.object({
     .object({
       // String permisivo para no invalidar borradores guardados con códigos
       // viejos (ej. v01-05). Default = código vigente.
-      codigoFormulario: z.string().default('AD-OO-0136/01-07'),
+      codigoFormulario: z.string().default('AD-OO-0136/01'),
       version: z.literal('Ene.22').default('Ene.22'),
       fechaCreacion: z.string().default(() => new Date().toISOString()),
       estado: z.enum(['borrador', 'presentado']).default('borrador'),
