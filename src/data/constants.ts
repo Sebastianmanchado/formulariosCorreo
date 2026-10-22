@@ -3,6 +3,12 @@ export const CORREO_AMARILLO = '#FFCC00';
 
 export const APP_VERSION = 'v1.01.2';
 
+/** Casillas que reciben el formulario APEM con el PDF adjunto. */
+export const DESTINATARIOS_FORMULARIO = [
+  'MABruno@correoargentino.com.ar',
+  'dersinger@correoargentino.com.ar',
+] as const;
+
 /**
  * Opciones de selects del formulario.
  * Las `value` se persisten en el schema; los `label` se muestran en la UI y el PDF.

@@ -19,11 +19,16 @@ import {
 } from './hooks/useLocalStorage';
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, validarParaImpresion, type Proyecto } from './schemas/proyecto';
-import { CORREO_AMARILLO, APP_VERSION } from './data/constants';
+import { CORREO_AMARILLO, APP_VERSION, DESTINATARIOS_FORMULARIO } from './data/constants';
+import { descargarCorreoConPdf } from './utils/enviarFormulario';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { logger } from './utils/logger';
 
-type PdfState = { generating: false } | { generating: true; values: Proyecto };
+type PdfAction = 'download' | 'email';
+
+type PdfState =
+  | { generating: false }
+  | { generating: true; values: Proyecto; action: PdfAction };
 
 /**
  * Secciones del formulario. El `id` se usa como anchor para scroll y como
@@ -155,7 +160,11 @@ function AppInner({ boot }: { boot: ApemStore }) {
     history.replaceState(null, '', '#caratula');
   };
 
-  const handleGeneratePdf = async () => {
+  const handleGeneratePdf = (action: PdfAction) => {
+    void runPdf(action);
+  };
+
+  const runPdf = async (action: PdfAction) => {
     catalog.saveNow();
     const camposPdf = [
       'caratula.encabezado.fecha',
@@ -175,12 +184,13 @@ function AppInner({ boot }: { boot: ApemStore }) {
       logger.warn('pdf.validation_failed', {
         fields: issues.map((issue) => issue.path),
       });
+      const verbo = action === 'email' ? 'enviar' : 'imprimir';
       window.alert(
         hasRequired && hasOrder
           ? 'Completá los campos obligatorios de la carátula. Además, los años y meses de finalización deben ser posteriores al de inicio.'
           : hasOrder
             ? 'Revisá las fechas en Características Básicas: los años y meses de finalización deben ser posteriores al de inicio.'
-            : 'Completá los campos obligatorios de la carátula antes de imprimir.'
+            : `Completá los campos obligatorios de la carátula antes de ${verbo}.`
       );
       scrollToSection('section-caratula', false);
       return;
@@ -192,26 +202,44 @@ function AppInner({ boot }: { boot: ApemStore }) {
       (n, g) => n + g.items.length,
       0
     );
-    logger.info('pdf.generation_started', { attachmentCount });
-    setPdf({ generating: true, values });
+    logger.info('pdf.generation_started', { attachmentCount, action });
+    setPdf({ generating: true, values, action });
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
     );
     try {
       const root = pdfRootRef.current;
-      if (root) {
-        await generateProyectoPdf(root, {
-          nombreProyecto: values.caratula?.descripcion?.denominacion,
-          attachments: attachmentGroups,
-        });
-      } else {
+      if (!root) {
         throw new Error('PdfPreview no disponible para exportar.');
       }
+      const generated = await generateProyectoPdf(root, {
+        nombreProyecto: values.caratula?.descripcion?.denominacion,
+        attachments: attachmentGroups,
+        download: action === 'download',
+      });
+      if (action === 'email') {
+        await descargarCorreoConPdf({
+          pdf: generated.blob,
+          fileName: generated.fileName,
+          denominacion: values.caratula?.descripcion?.denominacion,
+        });
+        logger.info('pdf.email_prepared', { fileName: generated.fileName });
+        window.alert(
+          `Se preparó el correo con el PDF adjunto para:\n\n${DESTINATARIOS_FORMULARIO.join('\n')}\n\nAbrí el archivo .eml descargado. Outlook lo abre como un mensaje listo para enviar.`
+        );
+      }
     } catch (err) {
-      logger.error('pdf.generation_failed', {}, err);
-      window.alert(
-        'Hubo un problema generando el PDF. Revisá la consola para más detalle.'
-      );
+      if (action === 'email') {
+        logger.error('pdf.email_failed', {}, err);
+        window.alert(
+          'No se pudo preparar el correo con el PDF. Revisá la consola para más detalle.'
+        );
+      } else {
+        logger.error('pdf.generation_failed', {}, err);
+        window.alert(
+          'Hubo un problema generando el PDF. Revisá la consola para más detalle.'
+        );
+      }
     } finally {
       setPdf({ generating: false });
     }
@@ -225,8 +253,10 @@ function AppInner({ boot }: { boot: ApemStore }) {
           <Topbar
             catalog={catalog}
             generating={pdf.generating}
+            pdfAction={pdf.generating ? pdf.action : null}
             onReset={handleReset}
-            onGeneratePdf={handleGeneratePdf}
+            onGeneratePdf={() => handleGeneratePdf('download')}
+            onEnviar={() => handleGeneratePdf('email')}
             onCreate={() => {
               catalog.createNew();
               showActiveApem();
@@ -301,16 +331,20 @@ function AppInner({ boot }: { boot: ApemStore }) {
 function Topbar({
   catalog,
   generating,
+  pdfAction,
   onReset,
   onGeneratePdf,
+  onEnviar,
   onCreate,
   onOpen,
   onDelete,
 }: {
   catalog: ApemCatalogApi;
   generating: boolean;
+  pdfAction: PdfAction | null;
   onReset: () => void;
   onGeneratePdf: () => void;
+  onEnviar: () => void;
   onCreate: () => void;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
@@ -376,7 +410,17 @@ function Topbar({
           className="flex items-center gap-2 rounded-sm bg-white px-4 py-1.5 text-[13px] font-semibold text-accent transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <PrinterIcon />
-          {generating ? 'Generando…' : 'Imprimir / PDF'}
+          {generating && pdfAction === 'download' ? 'Generando…' : 'Imprimir / PDF'}
+        </button>
+        <button
+          type="button"
+          onClick={onEnviar}
+          disabled={generating}
+          className="flex items-center gap-2 rounded-sm px-4 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+          style={{ background: CORREO_AMARILLO }}
+        >
+          <SendIcon />
+          {generating && pdfAction === 'email' ? 'Enviando…' : 'Enviar formulario'}
         </button>
       </div>
     </header>
@@ -404,6 +448,23 @@ function buildAttachmentGroups(
       })),
     },
   ];
+}
+
+function SendIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+    >
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
 }
 
 function PrinterIcon() {

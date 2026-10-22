@@ -28,7 +28,17 @@ export interface GenerateOptions {
   scale?: number;
   /** Adjuntos agrupados (Descripción / Objetivos). Se apenden al final. */
   attachments?: AttachmentGroup[];
+  /**
+   * Si es false, devuelve el PDF sin disparar la descarga.
+   * Default: true.
+   */
+  download?: boolean;
 }
+
+export type GeneratedPdf = {
+  blob: Blob;
+  fileName: string;
+};
 
 /**
  * Captura cada `<section data-pdf-page>`, arma el PDF base con jsPDF y, si hay
@@ -53,7 +63,7 @@ export interface GenerateOptions {
 export async function generateProyectoPdf(
   root: HTMLElement,
   options: GenerateOptions = {}
-): Promise<void> {
+): Promise<GeneratedPdf> {
   const startedAt = performance.now();
   const pages = Array.from(
     root.querySelectorAll<HTMLElement>('[data-pdf-page]')
@@ -113,17 +123,26 @@ export async function generateProyectoPdf(
   const groups = options.attachments ?? [];
   const hasAnyAttachment = groups.some((g) => g.items.length > 0);
   const attachmentCount = groups.reduce((n, g) => n + g.items.length, 0);
+  const shouldDownload = options.download !== false;
+
+  const finish = (blob: Blob, extra: Record<string, unknown>): GeneratedPdf => {
+    if (shouldDownload) downloadBlob(blob, fileName);
+    logCompleted(extra);
+    return { blob, fileName };
+  };
 
   if (!hasAnyAttachment) {
-    pdf.save(fileName);
-    logCompleted({ attachmentCount: 0, skippedCount: 0, mergeFailed: false });
-    return;
+    return finish(pdf.output('blob'), {
+      attachmentCount: 0,
+      skippedCount: 0,
+      mergeFailed: false,
+    });
   }
 
   // ─── Merge con pdf-lib ────────────────────────────────────────────────────
   // Si el merge falla globalmente (ej: pdf-lib explota), guardamos el PDF
   // base y avisamos al usuario que los adjuntos no se incluyeron.
-  let mergedOk = false;
+  let mergedBlob: Blob | null = null;
   const skipped: string[] = [];
 
   try {
@@ -154,37 +173,27 @@ export async function generateProyectoPdf(
     }
 
     const finalBytes = await finalDoc.save();
-    const blob = new Blob([new Uint8Array(finalBytes).buffer], {
+    mergedBlob = new Blob([new Uint8Array(finalBytes).buffer], {
       type: 'application/pdf',
     });
-    downloadBlob(blob, fileName);
-    mergedOk = true;
   } catch (err) {
     logger.error('pdf.merge_failed', {}, err);
   }
 
   // Fallback: si el merge falló entero, entregamos el PDF base sin adjuntos.
-  if (!mergedOk) {
-    pdf.save(fileName);
-    logCompleted({
-      attachmentCount,
-      skippedCount: skipped.length,
-      mergeFailed: true,
-    });
+  if (!mergedBlob) {
     if (typeof window !== 'undefined') {
       window.alert(
         'Se generó el PDF del formulario, pero los archivos adjuntos no pudieron ' +
           'incluirse. Probá quitando los adjuntos y descargándolos por separado.'
       );
     }
-    return;
+    return finish(pdf.output('blob'), {
+      attachmentCount,
+      skippedCount: skipped.length,
+      mergeFailed: true,
+    });
   }
-
-  logCompleted({
-    attachmentCount,
-    skippedCount: skipped.length,
-    mergeFailed: false,
-  });
 
   if (skipped.length > 0 && typeof window !== 'undefined') {
     window.alert(
@@ -193,6 +202,12 @@ export async function generateProyectoPdf(
         `\n\nProbá descargarlos en formato PDF estándar o como JPG/PNG.`
     );
   }
+
+  return finish(mergedBlob, {
+    attachmentCount,
+    skippedCount: skipped.length,
+    mergeFailed: false,
+  });
 }
 
 // ─── Helpers pdf-lib ─────────────────────────────────────────────────────────
@@ -461,7 +476,7 @@ function buildFileName(options: GenerateOptions): string {
   return `AD-OO-0136_${nombreSlug}_${fecha}.pdf`;
 }
 
-function downloadBlob(blob: Blob, fileName: string): void {
+export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
