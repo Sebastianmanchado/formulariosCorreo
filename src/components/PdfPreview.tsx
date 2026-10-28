@@ -1,4 +1,15 @@
-import { createContext, forwardRef, useContext, useMemo, type ReactNode, type CSSProperties } from 'react';
+import {
+  createContext,
+  forwardRef,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import {
   AUTORIZACIONES,
   CORREO_AMARILLO,
@@ -53,8 +64,9 @@ type Props = {
  *
  * Estructura del PDF:
  *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
- *        · pg 1: nombre del proyecto + cotización + tabla USD + firmas + observaciones.
- *        · pg 2: observaciones, con el texto de Observaciones y Comentarios.
+ *        · pg 1: nombre del proyecto + cotización + tabla USD + firmas + el
+ *          comienzo de Observaciones.
+ *        · pg 2: continuación del mismo texto. No se repite lo de la pág. 1.
  *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
  *      (Las firmas NO se repiten al final del reporte: viven sólo en el
  *       Resumen Ejecutivo.)
@@ -81,26 +93,65 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     [values.anexosActivos]
   );
 
+  // Un solo texto de observaciones, partido entre las dos carillas: lo que
+  // entra en el recuadro de la pág. 1 no se vuelve a imprimir en la pág. 2.
+  const fullObs = (values.caratula?.opiniones?.texto ?? '').trim();
+  const [obsFit, setObsFit] = useState<{ text: string; count: number } | null>(null);
+  const obsBoxRef = useRef<HTMLDivElement>(null);
+  const obsFitCount = obsFit?.text === fullObs ? obsFit.count : null;
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const box = obsBoxRef.current;
+      if (!box) return;
+      const count = measureObservacionesFit(box, fullObs);
+      setObsFit((prev) =>
+        prev?.text === fullObs && prev.count === count ? prev : { text: fullObs, count }
+      );
+    };
+    measure();
+    let cancel = false;
+    const ready = document.fonts?.ready;
+    if (ready) {
+      void ready.then(() => {
+        if (!cancel) measure();
+      });
+    }
+    return () => {
+      cancel = true;
+    };
+  }, [fullObs]);
+
+  const obsHead = obsFitCount == null ? '' : fullObs.slice(0, obsFitCount);
+  const obsTail =
+    obsFitCount == null ? fullObs : continuationAfter(fullObs, obsFitCount);
+  const showObsHead = fullObs.length === 0 || obsFitCount == null || obsFitCount > 0;
+  const obsContinued = showObsHead && obsFitCount != null && obsFitCount > 0;
+
   const pages = useMemo<PageDef[]>(() => {
     const list: PageDef[] = [];
 
     // ─── Resumen ejecutivo (primeras páginas del PDF, 2 carillas) ─────────
-    // Pensado para imprimirse a doble faz: página 1 = tablas, firmas y
-    // observaciones; página 2 = observaciones a página completa.
+    // Pensado para imprimirse a doble faz. Las dos cajas de Observaciones
+    // son el mismo campo: la pág. 2 sigue donde se cortó la pág. 1.
     list.push({
       key: 'resumen-exec',
       orientation: 'portrait',
       content: (
-        <ResumenEjecutivoPage values={values} totales={totalesCaratula} />
+        <ResumenEjecutivoPage
+          values={values}
+          totales={totalesCaratula}
+          obsText={obsHead}
+          showObs={showObsHead}
+          obsRef={obsBoxRef}
+        />
       ),
     });
     list.push({
       key: 'resumen-exec-autorizaciones',
       orientation: 'portrait',
       content: (
-        <ResumenEjecutivoAutorizacionesPage
-          text={values.caratula?.opiniones?.texto}
-        />
+        <ResumenEjecutivoAutorizacionesPage text={obsTail} continued={obsContinued} />
       ),
     });
 
@@ -233,7 +284,16 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     // las firmas viven únicamente en el Resumen Ejecutivo (página 2).
 
     return list;
-  }, [values, totalesCaratula, totalesDetalle, totalesAnexos]);
+  }, [
+    values,
+    totalesCaratula,
+    totalesDetalle,
+    totalesAnexos,
+    obsHead,
+    obsTail,
+    showObsHead,
+    obsContinued,
+  ]);
 
   return (
     <div
@@ -266,16 +326,23 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
 function ResumenEjecutivoPage({
   values,
   totales,
+  obsText,
+  showObs,
+  obsRef,
 }: {
   values: Proyecto;
   totales: ReturnType<typeof computeTotales>;
+  obsText: string;
+  showObs: boolean;
+  obsRef: Ref<HTMLDivElement>;
 }) {
   const c = values.caratula;
   const nombre = c?.descripcion?.denominacion?.trim() || '(sin denominar)';
   const isUsd = c?.monedaEntrada === 'usd';
   const otVacia = !c?.encabezado?.ot?.trim();
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{ flexShrink: 0 }}>
       <div
         style={{
           marginTop: '3mm',
@@ -528,9 +595,14 @@ function ResumenEjecutivoPage({
         <FirmaBox label="7. Directorio" />
       </div>
 
-      <SectionTitle>Observaciones</SectionTitle>
-      <ObservacionesTexto text={c?.opiniones?.texto} compact />
-    </>
+      </div>
+      {showObs && (
+        <>
+          <SectionTitle>Observaciones</SectionTitle>
+          <ObservacionesTexto ref={obsRef} text={obsText} part="head" />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -591,45 +663,126 @@ function FirmaBox({ label }: { label: string }) {
 }
 
 /**
- * Segunda hoja del Resumen Ejecutivo — recuadro grande de Observaciones
- * que ocupa toda la página, complementario al recuadro chico de la pág 1.
- * El texto sale de Observaciones y Comentarios de la carátula.
+ * Segunda hoja del Resumen Ejecutivo. Mismo campo que Observaciones de la
+ * pág. 1: acá solo va el texto que no entró arriba.
  */
-function ResumenEjecutivoAutorizacionesPage({ text }: { text?: string | null }) {
+function ResumenEjecutivoAutorizacionesPage({
+  text,
+  continued,
+}: {
+  text: string;
+  continued: boolean;
+}) {
   return (
     <>
-      <SectionTitle>Observaciones</SectionTitle>
-      <ObservacionesTexto text={text} />
+      <SectionTitle>{continued ? 'Observaciones (cont.)' : 'Observaciones'}</SectionTitle>
+      <ObservacionesTexto text={text} part="tail" />
     </>
   );
 }
 
-function ObservacionesTexto({
-  text,
-  compact = false,
-}: {
-  text?: string | null;
-  compact?: boolean;
-}) {
+const OBS_BREAK_WINDOW = 48;
+
+/** Quita el espacio o salto de línea donde se cortó el texto, sin comerse el resto. */
+function continuationAfter(full: string, cut: number): string {
+  const tail = full.slice(cut);
+  if (tail.startsWith('\r\n')) return tail.slice(2);
+  if (tail.startsWith('\n') || tail.startsWith('\r') || tail.startsWith(' ')) {
+    return tail.slice(1);
+  }
+  return tail;
+}
+
+function snapObservacionesCut(text: string, count: number): number {
+  if (count <= 0 || count >= text.length) return count;
+  const prev = text[count - 1];
+  const next = text[count];
+  const boundary = prev === ' ' || prev === '\n' || prev === '\r' || next === ' ' || next === '\n' || next === '\r';
+  if (boundary) return count;
+  const start = Math.max(0, count - OBS_BREAK_WINDOW);
+  const slice = text.slice(start, count);
+  const rel = Math.max(slice.lastIndexOf(' '), slice.lastIndexOf('\n'));
+  if (rel < 0) return count;
+  const snapped = start + rel;
+  return snapped > 0 ? snapped : count;
+}
+
+/** Cuántos caracteres del texto entran en el recuadro de la pág. 1. */
+function measureObservacionesFit(box: HTMLElement, text: string): number {
+  const inner = box.querySelector<HTMLElement>('[data-obs-inner]');
+  if (!inner) return 0;
+  if (!text) {
+    inner.textContent = '';
+    return 0;
+  }
+  const limit = observacionesContentLimit(box);
+  if (limit < 8) {
+    inner.textContent = '';
+    return 0;
+  }
+  const fits = (count: number) => {
+    inner.textContent = text.slice(0, count);
+    return inner.scrollHeight <= limit;
+  };
+  let count: number;
+  if (fits(text.length)) {
+    count = text.length;
+  } else {
+    let lo = 0;
+    let hi = text.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (fits(mid)) lo = mid;
+      else hi = mid - 1;
+    }
+    count = lo;
+    const snapped = snapObservacionesCut(text, count);
+    if (snapped !== count && fits(snapped)) count = snapped;
+  }
+  inner.textContent = text.slice(0, count);
+  return count;
+}
+
+function observacionesContentLimit(box: HTMLElement): number {
+  const page = box.closest('[data-pdf-page]');
+  if (!page) return 0;
+  const style = getComputedStyle(box);
+  const padTop = Number.parseFloat(style.paddingTop) || 0;
+  const padBottom = Number.parseFloat(style.paddingBottom) || 0;
+  const pageRect = page.getBoundingClientRect();
+  const boxRect = box.getBoundingClientRect();
+  if (boxRect.top >= pageRect.bottom - 1) return 0;
+  const contentHeight = box.clientHeight - padTop - padBottom;
+  const overflowBelow = Math.max(0, boxRect.bottom - pageRect.bottom);
+  return contentHeight - overflowBelow;
+}
+
+const ObservacionesTexto = forwardRef<
+  HTMLDivElement,
+  { text: string; part: 'head' | 'tail' }
+>(function ObservacionesTexto({ text, part }, ref) {
   return (
     <div
+      ref={ref}
+      data-obs-part={part}
       style={{
         border: '1px solid #c8c0b4',
         borderRadius: '2px',
-        padding: compact ? '3mm 4mm' : '4mm 5mm',
+        padding: '3mm 4mm',
         background: '#ffffff',
         overflow: 'hidden',
-        whiteSpace: 'pre-wrap',
+        flex: 1,
+        minHeight: 0,
         fontSize: '9pt',
         lineHeight: 1.45,
-        flex: compact ? undefined : 1,
-        minHeight: compact ? '25mm' : 0,
       }}
     >
-      {(text ?? '').trim()}
+      <div data-obs-inner style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
+        {text}
+      </div>
     </div>
   );
-}
+});
 
 function CaratulaPage1({ values }: { values: Proyecto }) {
   const c = values.caratula;

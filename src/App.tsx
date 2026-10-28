@@ -42,6 +42,16 @@ const SECTIONS = [
 
 const SECTION_IDS = SECTIONS.map((s) => s.id);
 
+function waitFrames(count: number) {
+  return new Promise<void>((resolve) => {
+    const step = (left: number) => {
+      if (left <= 0) resolve();
+      else requestAnimationFrame(() => step(left - 1));
+    };
+    step(count);
+  });
+}
+
 function scrollToSection(id: string, updateHash = true) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -204,9 +214,17 @@ function AppInner({ boot }: { boot: ApemStore }) {
     );
     logger.info('pdf.generation_started', { attachmentCount, action });
     setPdf({ generating: true, values, action });
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-    );
+    // El corte de Observaciones se mide al montar el preview y, de nuevo,
+    // cuando las fuentes están listas. Esperamos eso antes de capturar.
+    await waitFrames(2);
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      try {
+        await document.fonts.ready;
+      } catch {
+        /* la captura sigue con las fuentes que haya */
+      }
+    }
+    await waitFrames(2);
     try {
       const root = pdfRootRef.current;
       if (!root) {
