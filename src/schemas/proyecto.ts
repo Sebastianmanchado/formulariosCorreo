@@ -190,11 +190,28 @@ const evaluacionSchema = z.object({
 });
 
 // ─── Opiniones ──────────────────────────────────────────────────────────────
-const opinionesSchema = z.object({
-  planeamiento: longTextField,
-  administracion: longTextField,
-  areasApoyo: longTextField,
-});
+// Un solo texto. Borradores viejos traían tres campos (planeamiento,
+// administración y áreas de apoyo): se concatenan al leer.
+const LEGACY_OPINIONES = [
+  { key: 'planeamiento', label: 'Director de Planeamiento Estratégico de Negocios' },
+  { key: 'administracion', label: 'Sub Director General de Innovación y Transformación Corporativa' },
+  { key: 'areasApoyo', label: 'Áreas de Apoyo' },
+] as const;
+
+const opinionesSchema = z.preprocess((val) => {
+  if (!val || typeof val !== 'object') return { texto: '' };
+  const raw = val as Record<string, unknown>;
+  if (typeof raw.texto === 'string' && raw.texto.trim()) return { texto: raw.texto };
+  const partes = LEGACY_OPINIONES.flatMap(({ key, label }) => {
+    const text = raw[key];
+    if (typeof text !== 'string' || !text.trim()) return [];
+    return [`${label}:\n${text.trim()}`];
+  });
+  if (partes.length > 0) return { texto: partes.join('\n\n') };
+  return { texto: typeof raw.texto === 'string' ? raw.texto : '' };
+}, z.object({
+  texto: longTextField,
+}));
 
 // ─── C. Autorizaciones ──────────────────────────────────────────────────────
 // La firma + fecha se completan a mano tras imprimir, así que no guardamos

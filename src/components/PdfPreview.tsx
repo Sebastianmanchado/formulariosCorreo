@@ -53,9 +53,8 @@ type Props = {
  *
  * Estructura del PDF:
  *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
- *        · pg 1: nombre del proyecto + cotización + tabla USD + observaciones
- *          (Dir. Planeamiento / Subdir. Innovación / Áreas de apoyo).
- *        · pg 2: autorizaciones — 7 firmas de los Aprobadores de APEM.
+ *        · pg 1: nombre del proyecto + cotización + tabla USD + firmas + observaciones.
+ *        · pg 2: observaciones, con el texto de Opiniones y Comentarios.
  *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
  *      (Las firmas NO se repiten al final del reporte: viven sólo en el
  *       Resumen Ejecutivo.)
@@ -86,8 +85,8 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     const list: PageDef[] = [];
 
     // ─── Resumen ejecutivo (primeras páginas del PDF, 2 carillas) ─────────
-    // Pensado para imprimirse a doble faz: página 1 = tablas + observaciones,
-    // página 2 = autorizaciones (las 7 firmas de los aprobadores de APEM).
+    // Pensado para imprimirse a doble faz: página 1 = tablas, firmas y
+    // observaciones; página 2 = observaciones a página completa.
     list.push({
       key: 'resumen-exec',
       orientation: 'portrait',
@@ -98,7 +97,11 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
     list.push({
       key: 'resumen-exec-autorizaciones',
       orientation: 'portrait',
-      content: <ResumenEjecutivoAutorizacionesPage />,
+      content: (
+        <ResumenEjecutivoAutorizacionesPage
+          text={values.caratula?.opiniones?.texto}
+        />
+      ),
     });
 
     // ─── Reporte completo ─────────────────────────────────────────────────
@@ -526,15 +529,7 @@ function ResumenEjecutivoPage({
       </div>
 
       <SectionTitle>Observaciones</SectionTitle>
-      <div
-        style={{
-          border: '1px solid #c8c0b4',
-          borderRadius: '2px',
-          padding: '3mm 4mm',
-          background: '#ffffff',
-          minHeight: '25mm',
-        }}
-      />
+      <ObservacionesTexto text={c?.opiniones?.texto} compact />
     </>
   );
 }
@@ -598,23 +593,41 @@ function FirmaBox({ label }: { label: string }) {
 /**
  * Segunda hoja del Resumen Ejecutivo — recuadro grande de Observaciones
  * que ocupa toda la página, complementario al recuadro chico de la pág 1.
- * Pensado para impresión doble faz.
+ * El texto sale de Opiniones y Comentarios de la carátula.
  */
-function ResumenEjecutivoAutorizacionesPage() {
+function ResumenEjecutivoAutorizacionesPage({ text }: { text?: string | null }) {
   return (
     <>
       <SectionTitle>Observaciones</SectionTitle>
-      <div
-        style={{
-          border: '1px solid #c8c0b4',
-          borderRadius: '2px',
-          padding: '4mm 5mm',
-          background: '#ffffff',
-          flex: 1,
-          minHeight: 0,
-        }}
-      />
+      <ObservacionesTexto text={text} />
     </>
+  );
+}
+
+function ObservacionesTexto({
+  text,
+  compact = false,
+}: {
+  text?: string | null;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        border: '1px solid #c8c0b4',
+        borderRadius: '2px',
+        padding: compact ? '3mm 4mm' : '4mm 5mm',
+        background: '#ffffff',
+        overflow: 'hidden',
+        whiteSpace: 'pre-wrap',
+        fontSize: '9pt',
+        lineHeight: 1.45,
+        flex: compact ? undefined : 1,
+        minHeight: compact ? '25mm' : 0,
+      }}
+    >
+      {(text ?? '').trim()}
+    </div>
   );
 }
 
