@@ -54,7 +54,7 @@ type Props = {
  * Estructura del PDF:
  *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
  *        · pg 1: nombre del proyecto + cotización + tabla USD + firmas + observaciones.
- *        · pg 2: observaciones, con el texto de Opiniones y Comentarios.
+ *        · pg 2: observaciones, con el texto de Observaciones y Comentarios.
  *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
  *      (Las firmas NO se repiten al final del reporte: viven sólo en el
  *       Resumen Ejecutivo.)
@@ -593,7 +593,7 @@ function FirmaBox({ label }: { label: string }) {
 /**
  * Segunda hoja del Resumen Ejecutivo — recuadro grande de Observaciones
  * que ocupa toda la página, complementario al recuadro chico de la pág 1.
- * El texto sale de Opiniones y Comentarios de la carátula.
+ * El texto sale de Observaciones y Comentarios de la carátula.
  */
 function ResumenEjecutivoAutorizacionesPage({ text }: { text?: string | null }) {
   return (

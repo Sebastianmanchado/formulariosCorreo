@@ -835,9 +835,9 @@ function OpinionesSection() {
   const { register } = useFormContext<Proyecto>();
   return (
     <>
-      <SectionTitle variant="sub">Opiniones y Comentarios</SectionTitle>
+      <SectionTitle variant="sub">Observaciones y Comentarios</SectionTitle>
       <div className="mb-3 rounded-sm border border-l-4 border-border border-l-accent2 bg-white px-3.5 py-2.5 text-[12px] text-ink-muted">
-        Lo que se escriba acá se incluye en Observaciones del resumen ejecutivo.
+        Lo que se escriba acá se incluye en Observaciones y comentarios del resumen ejecutivo.
       </div>
       <Card>
         <TextArea rows={6} {...register('caratula.opiniones.texto')} />
