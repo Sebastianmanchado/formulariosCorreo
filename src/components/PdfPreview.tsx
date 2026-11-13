@@ -11,7 +11,6 @@ import {
   type Ref,
 } from 'react';
 import {
-  AUTORIZACIONES,
   CORREO_AMARILLO,
   labelForModalidad,
   labelForTipoErogacion,
@@ -64,12 +63,11 @@ type Props = {
  *
  * Estructura del PDF:
  *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
- *        · pg 1: nombre del proyecto + cotización + tabla USD + firmas + el
+ *        · pg 1: nombre del proyecto + cotización + tabla USD + el
  *          comienzo de Observaciones.
  *        · pg 2: continuación del mismo texto. No se repite lo de la pág. 1.
  *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
- *      (Las firmas NO se repiten al final del reporte: viven sólo en el
- *       Resumen Ejecutivo.)
+ *      (El PDF no incluye sección de firmas.)
  */
 export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   { values },
@@ -280,8 +278,7 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
       });
     }
 
-    // Las autorizaciones al final del PDF fueron eliminadas a propósito:
-    // las firmas viven únicamente en el Resumen Ejecutivo (página 2).
+    // El PDF no incluye sección de firmas/autorizaciones.
 
     return list;
   }, [
@@ -585,16 +582,6 @@ function ResumenEjecutivoPage({
         </table>
       )}
 
-      <SectionTitle>Autorizaciones — Aprobadores de APEM</SectionTitle>
-      <Grid cols="repeat(3, 1fr)" gap="3mm">
-        {AUTORIZACIONES.slice(0, 6).map((a) => (
-          <FirmaBox key={a.key} label={a.label} />
-        ))}
-      </Grid>
-      <div style={{ marginTop: '3mm' }}>
-        <FirmaBox label="7. Directorio" />
-      </div>
-
       </div>
       {showObs && (
         <>
@@ -602,62 +589,6 @@ function ResumenEjecutivoPage({
           <ObservacionesTexto ref={obsRef} text={obsText} part="head" />
         </>
       )}
-    </div>
-  );
-}
-
-/**
- * Caja de firma reutilizable: título arriba, espacio en blanco, línea para
- * firma y campo de fecha.
- */
-function FirmaBox({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        border: '1px solid #c8c0b4',
-        borderRadius: '2px',
-        padding: '2.5mm 3.5mm',
-        background: '#ffffff',
-        minHeight: '28mm',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div
-        style={{
-          fontSize: '8pt',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          color: '#1a3a5c',
-          letterSpacing: '0.3px',
-          borderBottom: '1px solid #c8c0b4',
-          paddingBottom: '1.2mm',
-          marginBottom: '1.5mm',
-          minHeight: '7mm',
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ flex: 1 }} />
-      <div
-        style={{
-          borderBottom: '1px solid #6b6158',
-          height: '8mm',
-          marginBottom: '1mm',
-        }}
-      />
-      <div
-        style={{
-          fontSize: '7.5pt',
-          color: '#6b6158',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '2mm',
-        }}
-      >
-        <span>Fecha:</span>
-        <span style={{ flex: 1, borderBottom: '1px solid #c8c0b4' }} />
-      </div>
     </div>
   );
 }
