@@ -62,10 +62,11 @@ type Props = {
  * orientación se pasa en `data-pdf-orientation` y el generador la lee.
  *
  * Estructura del PDF:
- *   1. Resumen ejecutivo — 2 carillas (para impresión doble faz):
+ *   1. Resumen ejecutivo:
  *        · pg 1: nombre del proyecto + cotización + tabla USD + el
  *          comienzo de Observaciones.
- *        · pg 2: continuación del mismo texto. No se repite lo de la pág. 1.
+ *        · pg 2 (solo si el texto no entra en la pág. 1): continuación.
+ *          No se repite lo de la pág. 1. Si no hay resto, esa hoja no sale.
  *   2. Reporte completo: Carátula (3 pgs), Detalle Mensual, Anexos Activos.
  *      (El PDF no incluye sección de firmas.)
  */
@@ -129,9 +130,10 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
   const pages = useMemo<PageDef[]>(() => {
     const list: PageDef[] = [];
 
-    // ─── Resumen ejecutivo (primeras páginas del PDF, 2 carillas) ─────────
-    // Pensado para imprimirse a doble faz. Las dos cajas de Observaciones
-    // son el mismo campo: la pág. 2 sigue donde se cortó la pág. 1.
+    // ─── Resumen ejecutivo ────────────────────────────────────────────────
+    // Las dos cajas de Observaciones son el mismo campo: la pág. 2 sigue
+    // donde se cortó la pág. 1. Si el texto entra entero arriba, no se
+    // agrega la hoja de continuación (quedaría una página casi vacía).
     list.push({
       key: 'resumen-exec',
       orientation: 'portrait',
@@ -145,13 +147,15 @@ export const PdfPreview = forwardRef<HTMLDivElement, Props>(function PdfPreview(
         />
       ),
     });
-    list.push({
-      key: 'resumen-exec-autorizaciones',
-      orientation: 'portrait',
-      content: (
-        <ResumenEjecutivoAutorizacionesPage text={obsTail} continued={obsContinued} />
-      ),
-    });
+    if (obsTail.trim().length > 0) {
+      list.push({
+        key: 'resumen-exec-autorizaciones',
+        orientation: 'portrait',
+        content: (
+          <ResumenEjecutivoAutorizacionesPage text={obsTail} continued={obsContinued} />
+        ),
+      });
+    }
 
     // ─── Reporte completo ─────────────────────────────────────────────────
     list.push({
