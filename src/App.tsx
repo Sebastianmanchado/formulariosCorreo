@@ -243,7 +243,7 @@ function AppInner({ boot }: { boot: ApemStore }) {
         });
         logger.info('pdf.email_prepared', { fileName: generated.fileName });
         window.alert(
-          `Se preparó el correo con el PDF adjunto para:\n\n${DESTINATARIOS_FORMULARIO.join('\n')}\n\nAbrí el archivo .eml descargado. Outlook lo abre como un mensaje listo para enviar.`
+          `✔ El correo quedó listo, con el PDF adjunto.\n\nDestinatario:\n${DESTINATARIOS_FORMULARIO.join('\n')}\n\nPróximos pasos:\n1. Abrí el archivo .eml que se acaba de descargar (barra de descargas del navegador o carpeta Descargas).\n2. Se abrirá en Outlook como un mensaje nuevo, con destinatario, asunto y PDF ya cargados.\n3. Revisalo y presioná Enviar.`
         );
       }
     } catch (err) {
