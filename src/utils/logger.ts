@@ -27,8 +27,7 @@ export type LogEvent =
   | 'pdf.attachment_skipped'
   | 'pdf.separator_failed'
   | 'pdf.merge_failed'
-  | 'pdf.email_prepared'
-  | 'pdf.email_failed'
+  | 'pdf.generated'
   | 'error.unhandled';
 
 function createSessionId(): string {

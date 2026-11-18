@@ -20,11 +20,11 @@ import {
 import { useProyectoForm } from './hooks/useProyectoForm';
 import { crearProyectoVacio, validarParaImpresion, type Proyecto } from './schemas/proyecto';
 import { CORREO_AMARILLO, APP_VERSION, DESTINATARIOS_FORMULARIO } from './data/constants';
-import { descargarCorreoConPdf } from './utils/enviarFormulario';
+import { EnvioModal, type PdfListo } from './components/EnvioModal';
 import { generateProyectoPdf, type AttachmentGroup } from './utils/pdfGenerator';
 import { logger } from './utils/logger';
 
-type PdfAction = 'download' | 'email';
+type PdfAction = 'download';
 
 type PdfState =
   | { generating: false }
@@ -80,6 +80,7 @@ function AppInner({ boot }: { boot: ApemStore }) {
   const active = useActiveSection(SECTION_IDS);
   const pdfRootRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PdfState>({ generating: false });
+  const [pdfListo, setPdfListo] = useState<PdfListo | null>(null);
 
   // Al montar: si la URL trae hash (#detalle, #anexos…), scrollear ahí sin
   // animación para no marear con el load inicial.
@@ -194,13 +195,12 @@ function AppInner({ boot }: { boot: ApemStore }) {
       logger.warn('pdf.validation_failed', {
         fields: issues.map((issue) => issue.path),
       });
-      const verbo = action === 'email' ? 'enviar' : 'imprimir';
       window.alert(
         hasRequired && hasOrder
           ? 'Completá los campos obligatorios de la carátula. Además, los años y meses de finalización deben ser posteriores al de inicio.'
           : hasOrder
             ? 'Revisá las fechas en Características Básicas: los años y meses de finalización deben ser posteriores al de inicio.'
-            : `Completá los campos obligatorios de la carátula antes de ${verbo}.`
+            : `Completá los campos obligatorios de la carátula antes de descargar.`
       );
       scrollToSection('section-caratula', false);
       return;
@@ -233,31 +233,30 @@ function AppInner({ boot }: { boot: ApemStore }) {
       const generated = await generateProyectoPdf(root, {
         nombreProyecto: values.caratula?.descripcion?.denominacion,
         attachments: attachmentGroups,
-        download: action === 'download',
+        download: true,
       });
-      if (action === 'email') {
-        await descargarCorreoConPdf({
-          pdf: generated.blob,
-          fileName: generated.fileName,
-          denominacion: values.caratula?.descripcion?.denominacion,
-        });
-        logger.info('pdf.email_prepared', { fileName: generated.fileName });
-        window.alert(
-          `✔ El correo quedó listo, con el PDF adjunto.\n\nDestinatario:\n${DESTINATARIOS_FORMULARIO.join('\n')}\n\nPróximos pasos:\n1. Abrí el archivo .eml que se acaba de descargar (barra de descargas del navegador o carpeta Descargas).\n2. Se abrirá en Outlook como un mensaje nuevo, con destinatario, asunto y PDF ya cargados.\n3. Revisalo y presioná Enviar.`
-        );
-      }
+      const valido = await verificarPdf(generated.blob);
+      const denominacion = (values.caratula?.descripcion?.denominacion ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      logger.info('pdf.generated', {
+        fileName: generated.fileName,
+        valido,
+        sizeBytes: generated.blob.size,
+      });
+      setPdfListo({
+        fileName: generated.fileName,
+        sizeBytes: generated.blob.size,
+        valido,
+        asunto: denominacion
+          ? `Formulario APEM AD-OO-0136 - ${denominacion}`
+          : 'Formulario APEM AD-OO-0136',
+      });
     } catch (err) {
-      if (action === 'email') {
-        logger.error('pdf.email_failed', {}, err);
-        window.alert(
-          'No se pudo preparar el correo con el PDF. Revisá la consola para más detalle.'
-        );
-      } else {
-        logger.error('pdf.generation_failed', {}, err);
-        window.alert(
-          'Hubo un problema generando el PDF. Revisá la consola para más detalle.'
-        );
-      }
+      logger.error('pdf.generation_failed', {}, err);
+      window.alert(
+        'Hubo un problema generando el PDF. Revisá la consola para más detalle.'
+      );
     } finally {
       setPdf({ generating: false });
     }
@@ -274,7 +273,6 @@ function AppInner({ boot }: { boot: ApemStore }) {
             pdfAction={pdf.generating ? pdf.action : null}
             onReset={handleReset}
             onGeneratePdf={() => handleGeneratePdf('download')}
-            onEnviar={() => handleGeneratePdf('email')}
             onCreate={() => {
               catalog.createNew();
               showActiveApem();
@@ -326,6 +324,14 @@ function AppInner({ boot }: { boot: ApemStore }) {
           Correo Argentino © {new Date().getFullYear()} · {APP_VERSION} · Desarrollado con IA
         </footer>
 
+        {pdfListo && (
+          <EnvioModal
+            pdf={pdfListo}
+            destinatarios={DESTINATARIOS_FORMULARIO}
+            onClose={() => setPdfListo(null)}
+          />
+        )}
+
         {/* PdfPreview off-screen: se monta solo durante la generación. */}
         {pdf.generating && (
           <div
@@ -352,7 +358,6 @@ function Topbar({
   pdfAction,
   onReset,
   onGeneratePdf,
-  onEnviar,
   onCreate,
   onOpen,
   onDelete,
@@ -362,7 +367,6 @@ function Topbar({
   pdfAction: PdfAction | null;
   onReset: () => void;
   onGeneratePdf: () => void;
-  onEnviar: () => void;
   onCreate: () => void;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
@@ -427,18 +431,8 @@ function Topbar({
           disabled={generating}
           className="flex items-center gap-2 rounded-sm bg-white px-4 py-1.5 text-[13px] font-semibold text-accent transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <PrinterIcon />
-          {generating && pdfAction === 'download' ? 'Generando…' : 'Imprimir / PDF'}
-        </button>
-        <button
-          type="button"
-          onClick={onEnviar}
-          disabled={generating}
-          className="flex items-center gap-2 rounded-sm px-4 py-1.5 text-[13px] font-semibold text-ink transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ background: CORREO_AMARILLO }}
-        >
-          <SendIcon />
-          {generating && pdfAction === 'email' ? 'Enviando…' : 'Enviar formulario'}
+          <DownloadIcon />
+          {generating && pdfAction === 'download' ? 'Generando…' : 'Descargar'}
         </button>
       </div>
     </header>
@@ -468,7 +462,7 @@ function buildAttachmentGroups(
   ];
 }
 
-function SendIcon() {
+function DownloadIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -479,26 +473,21 @@ function SendIcon() {
       strokeLinejoin="round"
       className="h-4 w-4"
     >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   );
 }
 
-function PrinterIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <polyline points="6 9 6 2 18 2 18 9" />
-      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-      <rect x="6" y="14" width="12" height="8" />
-    </svg>
-  );
+/** Verifica que el blob sea un PDF no vacío (cabecera %PDF y marcador %%EOF). */
+async function verificarPdf(blob: Blob): Promise<boolean> {
+  if (blob.size < 1024) return false;
+  try {
+    const head = await blob.slice(0, 5).text();
+    const tail = await blob.slice(Math.max(0, blob.size - 1024)).text();
+    return head.startsWith('%PDF-') && tail.includes('%%EOF');
+  } catch {
+    return false;
+  }
 }
