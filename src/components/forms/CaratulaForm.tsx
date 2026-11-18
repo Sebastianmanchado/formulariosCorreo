@@ -15,7 +15,6 @@ import {
   MoneyInput,
   MonedaToggle,
   MonthYearPicker,
-  OrganigramaSelect,
   SectionTitle,
   Select,
   TextArea,
@@ -192,7 +191,15 @@ function EncabezadoSection() {
           />
           {fechaErr && <p className="text-[11px] text-accent2">{fechaErr}</p>}
         </Field>
-        <OrganigramaSelect />
+        <Field label="Subdirección" bold orientation="column" className="min-w-0">
+          <Input type="text" {...register('caratula.encabezado.subdireccion')} />
+        </Field>
+        <Field label="Dirección" bold orientation="column" className="min-w-0">
+          <Input type="text" {...register('caratula.encabezado.direccion')} />
+        </Field>
+        <Field label="Gerencia" bold orientation="column" className="min-w-0">
+          <Input type="text" {...register('caratula.encabezado.gerencia')} />
+        </Field>
         <Field label="OT (Orden de Trabajo)" bold orientation="column">
           <Input type="text" {...register('caratula.encabezado.ot')} />
         </Field>

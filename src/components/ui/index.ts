@@ -6,7 +6,6 @@ export { Checkbox } from './Checkbox';
 export { MoneyInput } from './MoneyInput';
 export { CalculatedField } from './CalculatedField';
 export { DynamicList } from './DynamicList';
-export { OrganigramaSelect } from './OrganigramaSelect';
 export { SignatureBox } from './SignatureBox';
 export { SectionTitle } from './SectionTitle';
 export { Card } from './Card';

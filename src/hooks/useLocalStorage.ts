@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { normalizarEncabezado } from '../data/organigrama';
 import { crearProyectoVacio, proyectoSchema, type Proyecto } from '../schemas/proyecto';
 import { logger } from '../utils/logger';
 
@@ -80,29 +79,6 @@ function purgeObsolete(): void {
   }
 }
 
-function sanitizar(proyecto: Proyecto): Proyecto {
-  const enc = proyecto.caratula.encabezado;
-  const norm = normalizarEncabezado(
-    enc.subdireccion ?? '',
-    enc.direccion ?? '',
-    enc.gerencia ?? ''
-  );
-  if (
-    norm.subdireccion === (enc.subdireccion ?? '') &&
-    norm.direccion === (enc.direccion ?? '') &&
-    norm.gerencia === (enc.gerencia ?? '')
-  ) {
-    return proyecto;
-  }
-  return {
-    ...proyecto,
-    caratula: {
-      ...proyecto.caratula,
-      encabezado: { ...enc, ...norm },
-    },
-  };
-}
-
 function summaryOf(id: string, entry: ApemEntry): ApemSummary {
   const denominacion = entry.data.caratula?.descripcion?.denominacion?.trim() ?? '';
   return {
@@ -149,7 +125,7 @@ function parseStore(raw: unknown): ApemStore | undefined {
     proyectos[id] = {
       updatedAt:
         typeof record.updatedAt === 'string' ? record.updatedAt : new Date().toISOString(),
-      data: sanitizar(parsed.data),
+      data: parsed.data,
     };
   }
 
@@ -222,7 +198,7 @@ export function loadApemStore(): ApemStore {
 
   const legacy = readLegacyV3();
   const id = newId();
-  const data = legacy ? sanitizar(legacy) : crearProyectoVacio();
+  const data = legacy ?? crearProyectoVacio();
   const store: ApemStore = {
     activeId: id,
     proyectos: { [id]: { updatedAt: new Date().toISOString(), data } },
