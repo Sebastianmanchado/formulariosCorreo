@@ -1,7 +1,7 @@
 {
   "name": "ad-oo-0136-formulario",
   "private": true,
-  "version": "1.1.4",
+  "version": "1.1.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
