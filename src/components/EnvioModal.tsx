@@ -83,7 +83,7 @@ export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
             style={{ background: CORREO_AMARILLO }}
           />
           <h2 id="envio-modal-title" className="text-[15px] font-semibold">
-            PDF descargado: ahora enviálo por correo
+            PDF descargado: ahora envialo por correo
           </h2>
         </div>
 
@@ -121,11 +121,8 @@ export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
 
           <ol className="space-y-3">
             {[
-              <>Abrí tu correo.</>,
-              <>
-                Revisá y adjuntá el PDF descargado:{' '}
-                <strong className="break-all">{pdf.fileName}</strong>
-              </>,
+              <>Abrí tu mail.</>,
+              <>Revisá y adjuntá el PDF descargado.</>,
               <>
                 Pegá el mail de destino.
                 <div className="mt-1.5 flex items-stretch gap-2">
@@ -168,7 +165,7 @@ export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
             href={mailto}
             className="rounded-sm border border-accent bg-transparent px-3 py-1.5 text-[12px] font-medium text-accent transition-colors hover:bg-accent/10"
           >
-            Abrir en mi correo
+            Abrir en mi mail
           </a>
           <button
             type="button"
