@@ -119,43 +119,38 @@ export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
             </div>
           </div>
 
-          <div>
-            <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-accent">
-              Casilla de destino
-            </div>
-            <div className="flex items-stretch gap-2">
-              <div className="flex min-w-0 flex-1 items-center break-all rounded-sm border border-border-input bg-white px-3 py-2 font-mono text-[12px]">
-                {correo}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleCopiar('correo', correo)}
-                className="shrink-0 rounded-sm px-3 text-[12px] font-semibold text-ink transition-colors hover:brightness-95"
-                style={{ background: CORREO_AMARILLO }}
-              >
-                {copiado === 'correo' ? '¡Copiado!' : 'Copiar'}
-              </button>
-            </div>
-          </div>
-
-          <ol className="space-y-2">
+          <ol className="space-y-3">
             {[
-              <>Abrí tu correo (Outlook) y creá un mensaje nuevo.</>,
+              <>Abrí tu correo.</>,
               <>
-                Pegá la casilla de destino. Podés usar el botón{' '}
-                <strong>Copiar</strong> o <strong>Abrir en mi correo</strong>.
+                Revisá y adjuntá el PDF descargado:{' '}
+                <strong className="break-all">{pdf.fileName}</strong>
               </>,
               <>
-                Adjuntá el PDF <strong>{pdf.fileName}</strong> desde tu carpeta
-                de Descargas.
+                Pegá el mail de destino.
+                <div className="mt-1.5 flex items-stretch gap-2">
+                  <div className="flex min-w-0 flex-1 items-center break-all rounded-sm border border-border-input bg-white px-3 py-2 font-mono text-[12px]">
+                    {correo}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopiar('correo', correo)}
+                    className="shrink-0 rounded-sm px-3 text-[12px] font-semibold text-ink transition-colors hover:brightness-95"
+                    style={{ background: CORREO_AMARILLO }}
+                  >
+                    {copiado === 'correo' ? '¡Copiado!' : 'Copiar'}
+                  </button>
+                </div>
               </>,
-              <>Revisá el mensaje y presioná Enviar.</>,
+              <>
+                Enviá el mail para formalizar la solicitud de inicio de firmas.
+              </>,
             ].map((paso, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">
                   {i + 1}
                 </span>
-                <span>{paso}</span>
+                <span className="min-w-0 flex-1">{paso}</span>
               </li>
             ))}
           </ol>
