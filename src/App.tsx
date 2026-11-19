@@ -236,9 +236,6 @@ function AppInner({ boot }: { boot: ApemStore }) {
         download: true,
       });
       const valido = await verificarPdf(generated.blob);
-      const denominacion = (values.caratula?.descripcion?.denominacion ?? '')
-        .replace(/\s+/g, ' ')
-        .trim();
       logger.info('pdf.generated', {
         fileName: generated.fileName,
         valido,
@@ -248,9 +245,6 @@ function AppInner({ boot }: { boot: ApemStore }) {
         fileName: generated.fileName,
         sizeBytes: generated.blob.size,
         valido,
-        asunto: denominacion
-          ? `Formulario APEM AD-OO-0136 - ${denominacion}`
-          : 'Formulario APEM AD-OO-0136',
       });
     } catch (err) {
       logger.error('pdf.generation_failed', {}, err);

@@ -6,7 +6,6 @@ export interface PdfListo {
   sizeBytes: number;
   /** Resultado de la verificación del PDF generado. */
   valido: boolean;
-  asunto: string;
 }
 
 interface Props {
@@ -44,7 +43,6 @@ async function copiar(texto: string): Promise<boolean> {
 export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
   const [copiado, setCopiado] = useState<string | null>(null);
   const correo = destinatarios.join('; ');
-  const mailto = `mailto:${destinatarios.join(',')}?subject=${encodeURIComponent(pdf.asunto)}`;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -153,20 +151,7 @@ export function EnvioModal({ pdf, destinatarios, onClose }: Props) {
           </ol>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-section px-5 py-3">
-          <button
-            type="button"
-            onClick={() => handleCopiar('asunto', pdf.asunto)}
-            className="rounded-sm border border-border-strong bg-transparent px-3 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-white/60"
-          >
-            {copiado === 'asunto' ? '¡Asunto copiado!' : 'Copiar asunto'}
-          </button>
-          <a
-            href={mailto}
-            className="rounded-sm border border-accent bg-transparent px-3 py-1.5 text-[12px] font-medium text-accent transition-colors hover:bg-accent/10"
-          >
-            Abrir en mi mail
-          </a>
+        <div className="flex items-center justify-end border-t border-border bg-section px-5 py-3">
           <button
             type="button"
             onClick={onClose}
