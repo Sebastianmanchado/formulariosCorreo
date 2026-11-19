@@ -1,7 +1,7 @@
 /** Amarillo institucional de Correo Argentino (ver correoargentino.com.ar). */
 export const CORREO_AMARILLO = '#FFCC00';
 
-export const APP_VERSION = 'v1.01.8';
+export const APP_VERSION = 'v1.01.9';
 
 /** Casilla que recibe el formulario APEM con el PDF adjunto. */
 export const DESTINATARIOS_FORMULARIO = ['solicitudapem@correoargentino.com.ar'] as const;
