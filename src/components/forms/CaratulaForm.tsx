@@ -191,7 +191,7 @@ function EncabezadoSection() {
           />
           {fechaErr && <p className="text-[11px] text-accent2">{fechaErr}</p>}
         </Field>
-        <Field label="Subdirección" bold orientation="column" className="min-w-0">
+        <Field label="Dirección Jerárquica" bold orientation="column" className="min-w-0">
           <Input type="text" {...register('caratula.encabezado.subdireccion')} />
         </Field>
         <Field label="Dirección" bold orientation="column" className="min-w-0">

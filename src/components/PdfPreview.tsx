@@ -727,7 +727,7 @@ function CaratulaPage1({ values }: { values: Proyecto }) {
       <SectionTitle>Encabezado</SectionTitle>
       <KV>
         <KVRow label="Fecha" value={formatDateAR(c?.encabezado?.fecha)} />
-        <KVRow label="Subdirección" value={c?.encabezado?.subdireccion || '—'} />
+        <KVRow label="Dirección Jerárquica" value={c?.encabezado?.subdireccion || '—'} />
         <KVRow label="Dirección" value={c?.encabezado?.direccion || '—'} />
         <KVRow label="Gerencia" value={c?.encabezado?.gerencia || '—'} />
         <KVRow label="OT" value={c?.encabezado?.ot || ''} />
